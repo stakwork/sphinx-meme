@@ -1,0 +1,32 @@
+sphinx-meme
+application
+.DS_Store
+.env
+.env-prod
+notes.md
+setup.md
+lnd.conf
+bin
+files/*
+storage/files/*.txt
+!storage/files/test.txt
+
+tls.cert
+admin.macaroon
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
+# frontend
+frontend/app/node_modules
+frontend/app/build
+frontend/app/.DS_Store
+frontend/app/.env.local
+frontend/app/.env.development.local
+frontend/app/.env.test.local
+frontend/app/.env.production.local
+frontend/app/npm-debug.log*
+frontend/app/yarn-debug.log*
+frontend/app/yarn-error.log*
