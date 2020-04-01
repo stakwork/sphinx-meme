@@ -32,6 +32,12 @@ JWT_KEY=***
 DATABASE_URL=***
 ````
 
+### providing access to a file
+
+Files can be accessed with a *mediaToken* from the file owner. For attachments, the *mediaToken* is simply sent in the attachment message. For purchased media, the *mediaToken* is included in the purchase confirmation message. All media access receipts have an expiration time.
+
+![Media Token](https://github.com/stakwork/sphinx-meme/raw/master/sql/media_token.png)
+
 ### authenticating
 
 Authentication is a 3-step process
@@ -85,12 +91,6 @@ The returned token asserts that you are the owner of the pubkey, and lets you up
 - GET `/mymedia`: list all my files
 
 - GET `/mymedia/{muid}`: get file info
-
-### providing access to a file
-
-Files can be accessed with a *mediaToken* from the file owner. For attachments, the *mediaToken* is simply sent in the attachment message. For purchased media, the *mediaToken* is included in the purchase confirmation message. All media access receipts have an expiration time.
-
-![Media Token](https://github.com/stakwork/sphinx-meme/raw/master/sql/media_token.png)
 
 **mediaToken**: `{host}.{muid}.{buyerPubKey}.{exp}.{sig}`
 
