@@ -51,7 +51,7 @@ Authentication is a 3-step process
 - POST `/verify` within 10 seconds *(application/x-www-form-urlencoded)*
 ```js
 // body
-{id:'12345',sig:'d3ubh75p45d'}
+{id:'12345',sig:'d3ubh75p45d',pubkey:'xxxxx'}
 // result
 {token:'base64encodedJWT'}
 ```
@@ -89,6 +89,8 @@ The returned token asserts that you are the owner of the pubkey, and lets you up
 ### providing access to a file
 
 Files can be accessed with a *mediaToken* from the file owner. For attachments, the *mediaToken* is simply sent in the attachment message. For purchased media, the *mediaToken* is included in the purchase confirmation message. All media access receipts have an expiration time.
+
+![Media Token](https://github.com/stakwork/sphinx-meme/raw/master/sql/media_token.png)
 
 **mediaToken**: `{host}.{muid}.{buyerPubKey}.{exp}.{sig}`
 
