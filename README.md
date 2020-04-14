@@ -3,7 +3,7 @@
 
 # sphinx-meme
 
-File server for sphinx memes, attachments, media, and files. Anyone can run a **sphinx-meme** server, and host files for [sphinx.chat](https://sphinx.chat) users. The *host* field of mediaToken is used to assert the host of your files (see below).
+Decentralized file server for sphinx memes, attachments, media, and files. Anyone can run a **sphinx-meme** server, and host files for [sphinx.chat](https://sphinx.chat) users. The *host* field of mediaToken is used to assert the host of your files (see below).
 
 Sphinx users can automatically auth with **sphinx-meme** by signing a challenge with their LND key. A JWT is returned, allowing access to upload and download files, and search public media.
 
