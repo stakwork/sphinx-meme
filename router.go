@@ -46,6 +46,7 @@ func initRouter() *chi.Mux {
 	})
 
 	r.Get("/ion", getIon)
+	r.Get("/ion-conference.js", getIonJs)
 
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Verifier(auth.TokenAuth))
@@ -68,7 +69,10 @@ func initRouter() *chi.Mux {
 }
 
 func getIon(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "ion.html")
+	http.ServeFile(w, r, "static/index.html")
+}
+func getIonJs(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "static/ion-conference.js")
 }
 
 func getPublicMedia(w http.ResponseWriter, r *http.Request) {
