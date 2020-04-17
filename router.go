@@ -45,6 +45,8 @@ func initRouter() *chi.Mux {
 		r.Get("/manifest.json", frontend.ManifestRoute)
 	})
 
+	r.Get("/ion", getIon)
+
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Verifier(auth.TokenAuth))
 		r.Use(jwtauth.Authenticator)
@@ -63,6 +65,10 @@ func initRouter() *chi.Mux {
 	})
 
 	return r
+}
+
+func getIon(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "ion.html")
 }
 
 func getPublicMedia(w http.ResponseWriter, r *http.Request) {
