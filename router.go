@@ -221,7 +221,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, encrypted bool) {
 
 	p := uploadParams{}
 	decodeForm(r.Form, &p)
-	if p.TTL == 0 { // default to one week
+	if p.TTL == 0 { // default to one year
 		p.TTL = 60 * 60 * 24 * 365
 	}
 
