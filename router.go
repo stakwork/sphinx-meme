@@ -43,10 +43,9 @@ func initRouter() *chi.Mux {
 		r.Get("/", frontend.IndexRoute)
 		r.Get("/static/*", frontend.StaticRoute)
 		r.Get("/manifest.json", frontend.ManifestRoute)
-	})
 
-	r.Get("/ion", getIon)
-	r.Get("/ion-conference.js", getIonJs)
+		r.Get("/public/{muid}", getPublicMedia)
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Verifier(auth.TokenAuth))
@@ -57,29 +56,27 @@ func initRouter() *chi.Mux {
 		r.Get("/mymedia", getMyMedia)              // only owner
 		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
 		r.Get("/media/{muid}", getMediaByMUID)
+
 		r.Post("/file", uploadEncryptedFile)
-		r.Post("/template", uploadTemplate)
-		r.Get("/template/{muid}", getPublicMedia)
-		r.Get("/templates", getTemplates)
-		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 		r.Get("/file/{token}", getMedia)
+
+		r.Post("/public", uploadPublic)
+
+		r.Post("/template", uploadTemplate)
+		r.Get("/template/{muid}", getTemplate)
+		r.Get("/templates", getTemplates)
+
+		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 	})
 
 	return r
 }
 
-func getIon(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "static/index.html")
-}
-func getIonJs(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "static/ion-conference.js")
-}
-
-func getPublicMedia(w http.ResponseWriter, r *http.Request) {
+func getTemplate(w http.ResponseWriter, r *http.Request) {
 
 	muid := chi.URLParam(r, "muid")
 
-	media := DB.getUnencryptedMediaByMuid(muid)
+	media := DB.getMediaWithDimensionsByMuid(muid)
 
 	nonceBytes, err := hex.DecodeString(media.Nonce)
 	var nonce [32]byte
@@ -87,7 +84,35 @@ func getPublicMedia(w http.ResponseWriter, r *http.Request) {
 		copy(nonce[:], nonceBytes)
 	}
 
-	fmt.Printf("GET PUBLIC: %s\n", muid)
+	reader, err := storage.Store.GetReader(muid, nonce)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("File not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	defer reader.Close()
+
+	fmt.Println("")
+	contentDisposition := fmt.Sprintf("attachment; filename=%s", media.Filename)
+	w.Header().Set("Content-Disposition", contentDisposition)
+	w.Header().Set("Content-Type", media.Mime)
+	w.Header().Set("Content-Length", strconv.Itoa(int(media.Size)))
+	io.Copy(w, reader)
+}
+
+func getPublicMedia(w http.ResponseWriter, r *http.Request) {
+
+	muid := chi.URLParam(r, "muid")
+
+	media := DB.getMediaByMUID(muid)
+
+	nonceBytes, err := hex.DecodeString(media.Nonce)
+	var nonce [32]byte
+	if err == nil {
+		copy(nonce[:], nonceBytes)
+	}
+
 	reader, err := storage.Store.GetReader(muid, nonce)
 	if err != nil {
 		fmt.Println(err)
@@ -109,7 +134,7 @@ func getTemplates(w http.ResponseWriter, r *http.Request) {
 	// ctx := r.Context()
 	// pubKey := ctx.Value(auth.ContextKey).(string)
 
-	medias := DB.getUnencryptedMedia()
+	medias := DB.getMediaWithDimensions()
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(medias)
 }
@@ -186,16 +211,20 @@ func getMediaByMUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, true)
+	uploadFile(w, r, false)
 }
 
 func uploadTemplate(w http.ResponseWriter, r *http.Request) {
+	uploadFile(w, r, true)
+}
+
+func uploadPublic(w http.ResponseWriter, r *http.Request) {
 	uploadFile(w, r, false)
 }
 
 // UploadFile uploads a file of any type
 // need a "name" of "file"
-func uploadFile(w http.ResponseWriter, r *http.Request, encrypted bool) {
+func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool) {
 	ctx := r.Context()
 	pubKey := ctx.Value(auth.ContextKey).(string)
 
@@ -237,7 +266,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, encrypted bool) {
 
 	imageWidth := 0
 	imageHeight := 0
-	if !encrypted {
+	if measureDimensions {
 		imageWidth, imageHeight = getImageDimension(file)
 	}
 
@@ -328,17 +357,15 @@ func getMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(mypubkey)
-	fmt.Println(terms.BuyerPubKey)
-	if mypubkey != terms.BuyerPubKey { // pubkey must match terms pubkey
-		fmt.Println("Wrong Buyer Pub Key")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
 	media := DB.getMediaByMUID(muid)
 	if media.ID == "" {
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if mypubkey != terms.BuyerPubKey { // pubkey must match terms pubkey
+		fmt.Println("Wrong Buyer Pub Key")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 

@@ -45,13 +45,13 @@ func (db database) getMyMedia(pubKey string) []Media {
 	return ms
 }
 
-func (db database) getUnencryptedMedia() []Media {
+func (db database) getMediaWithDimensions() []Media {
 	ms := []Media{}
 	db.db.Where("width > 0 and height > 0").Find(&ms)
 	return ms
 }
 
-func (db database) getUnencryptedMediaByMuid(muid string) Media {
+func (db database) getMediaWithDimensionsByMuid(muid string) Media {
 	m := Media{}
 	db.db.Where("width > 0 and height > 0 and id = ?", muid).First(&m)
 	return m
