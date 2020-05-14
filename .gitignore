@@ -1,7 +1,7 @@
 sphinx-meme
 application
 frontend/*
-.ebextensions/nginx/conf.d
+# .ebextensions/nginx/conf.d
 .DS_Store
 .env
 .env-prod
