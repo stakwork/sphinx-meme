@@ -68,7 +68,7 @@ The returned token asserts that you are the owner of the pubkey, and lets you up
 
 - GET `/search/{searchTerm}`: Postgres full text search of the file name, description, and tags. Returns an array of files in order of relevancy.
 
-- GET `/file/{mediaToken}`
+- GET `/file/{mediaToken}`: download the file
 
 - POST `/upload`: the file is hashed with blake2b, and this hash is used as the file key. A SQL record is created with key, name, size, your pubkey, etc.
 ```js
@@ -83,6 +83,10 @@ The returned token asserts that you are the owner of the pubkey, and lets you up
 	expiry: Number, // optional permanent expiry timestamp
 }
 ```
+
+- POST `/public`: same as above, but file is publically available
+
+- GET `/public/{muid}`: download a public file
 
 - GET `/media/{muid}`: get file info (does not include stats)
 
