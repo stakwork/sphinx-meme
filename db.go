@@ -51,9 +51,21 @@ func (db database) getMediaWithDimensions() []Media {
 	return ms
 }
 
+func (db database) getTemplates() []Media {
+	ms := []Media{}
+	db.db.Where("template = ?", true).Find(&ms)
+	return ms
+}
+
 func (db database) getMediaWithDimensionsByMuid(muid string) Media {
 	m := Media{}
 	db.db.Where("width > 0 and height > 0 and id = ?", muid).First(&m)
+	return m
+}
+
+func (db database) getTemplateByMuid(muid string) Media {
+	m := Media{}
+	db.db.Where("template = ? and id = ?", true, muid).First(&m)
 	return m
 }
 

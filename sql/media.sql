@@ -16,7 +16,10 @@ CREATE TABLE media (
   updated timestamptz,
   expiry timestamptz, -- optional permanent deletion of file
   total_sats BIGINT,
-  total_buys BIGINT
+  total_buys BIGINT,
+  template boolean,
+  width INT,
+  height INT
 );
 
 -- for searching 

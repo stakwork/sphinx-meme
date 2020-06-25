@@ -134,7 +134,7 @@ func getTemplates(w http.ResponseWriter, r *http.Request) {
 	// ctx := r.Context()
 	// pubKey := ctx.Value(auth.ContextKey).(string)
 
-	medias := DB.getMediaWithDimensions()
+	medias := DB.getTemplates()
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(medias)
 }

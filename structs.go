@@ -29,6 +29,7 @@ type Media struct {
 	TotalBuys   int64          `json:"total_buys,omitempty"`
 	Width       int            `json:"width"`
 	Height      int            `json:"height"`
+	Template    bool           `json:"template"`
 }
 
 // PropertyMap ...

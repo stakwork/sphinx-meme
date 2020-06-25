@@ -31,7 +31,7 @@ func goTest() {
 
 	TTL := 60 * 60 * 24 * 365 * 100
 
-	filename := "example16"
+	filename := "example10"
 
 	contentType := "image/png"
 
@@ -78,6 +78,7 @@ func goTest() {
 		TotalSats:   0,
 		Width:       imageWidth,
 		Height:      imageHeight,
+		Template:    true,
 	}
 	fmt.Printf("MEDIA: %+v\n", media)
 
