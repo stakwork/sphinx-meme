@@ -230,7 +230,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool) 
 
 	fmt.Println("File Upload ===> ")
 
-	// max of 15 MB files?
+	// max of 32 MB files?
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode("File too big")
@@ -405,7 +405,7 @@ func getMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	defer reader.Close()
 
-	contentDisposition := fmt.Sprintf("attachment; filename=%s", muid)
+	contentDisposition := fmt.Sprintf("attachment; filename=%s", media.Filename)
 	w.Header().Set("Content-Disposition", contentDisposition)
 	w.Header().Set("Content-Type", media.Mime)
 	w.Header().Set("Content-Length", strconv.Itoa(int(media.Size)))
