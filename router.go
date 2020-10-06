@@ -40,6 +40,10 @@ func initRouter() *chi.Mux {
 	})
 
 	r.Group(func(r chi.Router) {
+		r.Get("/podcast", getPodcast)
+	})
+
+	r.Group(func(r chi.Router) {
 		r.Get("/", frontend.IndexRoute)
 		r.Get("/static/*", frontend.StaticRoute)
 		r.Get("/manifest.json", frontend.ManifestRoute)
@@ -70,6 +74,17 @@ func initRouter() *chi.Mux {
 	})
 
 	return r
+}
+
+func getPodcast(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.Query().Get("url")
+	latest, err := getLatestEpisode(url)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(latest)
 }
 
 func getTemplate(w http.ResponseWriter, r *http.Request) {
