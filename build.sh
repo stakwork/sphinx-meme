@@ -2,7 +2,7 @@
 
 echo building...
 
-sudo rm /var/app/current/go.*
+# sudo rm /var/app/current/go.*
 
 # Install dependencies.
 go get ./...
