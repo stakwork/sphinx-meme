@@ -31,4 +31,5 @@ type store interface {
 	PostReader(string, *bytes.Buffer, int64, string, [32]byte) error
 	Delete(string) error
 	GenNonce() ([32]byte, error)
+	List(string) ([]string, error)
 }

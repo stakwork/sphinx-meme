@@ -71,6 +71,11 @@ func (store localStore) PostReader(path string, buf *bytes.Buffer, length int64,
 	return file.Sync()
 }
 
+// UNIMPLEMENTED
+func (store localStore) List(path string) ([]string, error) {
+	return []string{}, nil
+}
+
 func (store localStore) encryptReader(dest io.Writer, src io.Reader, nonce [32]byte) error {
 
 	// derive an encryption key from the master key and the nonce

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -128,7 +129,15 @@ func getPublicMedia(w http.ResponseWriter, r *http.Request) {
 		copy(nonce[:], nonceBytes)
 	}
 
-	reader, err := storage.Store.GetReader(muid, nonce)
+	thumb := r.URL.Query().Get("thumb")
+
+	themuid := muid
+	if thumb == "true" {
+		themuid = muid + "_thumb"
+	}
+
+	fmt.Println(themuid)
+	reader, err := storage.Store.GetReader(themuid, nonce)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("File not found")
@@ -141,7 +150,7 @@ func getPublicMedia(w http.ResponseWriter, r *http.Request) {
 	contentDisposition := fmt.Sprintf("attachment; filename=%s", media.Filename)
 	w.Header().Set("Content-Disposition", contentDisposition)
 	w.Header().Set("Content-Type", media.Mime)
-	w.Header().Set("Content-Length", strconv.Itoa(int(media.Size)))
+	// w.Header().Set("Content-Length", strconv.Itoa(int(media.Size)))
 	io.Copy(w, reader)
 }
 
@@ -226,20 +235,20 @@ func getMediaByMUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false)
+	uploadFile(w, r, false, false)
 }
 
 func uploadTemplate(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, true)
+	uploadFile(w, r, true, false)
 }
 
 func uploadPublic(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false)
+	uploadFile(w, r, false, true)
 }
 
 // UploadFile uploads a file of any type
 // need a "name" of "file"
-func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool) {
+func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool) {
 	ctx := r.Context()
 	pubKey := ctx.Value(auth.ContextKey).(string)
 
@@ -325,6 +334,10 @@ func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool) 
 		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(err.Error())
 		return
+	}
+
+	if thumb {
+		go uploadThumb(media.ID, nonce, ioutil.NopCloser(bytes.NewReader(buf.Bytes())))
 	}
 
 	path := media.ID

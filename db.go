@@ -51,6 +51,12 @@ func (db database) getMediaWithDimensions() []Media {
 	return ms
 }
 
+func (db database) getAllMedia() []Media {
+	ms := []Media{}
+	db.db.Find(&ms)
+	return ms
+}
+
 func (db database) getTemplates() []Media {
 	ms := []Media{}
 	db.db.Where("template = ?", true).Find(&ms)

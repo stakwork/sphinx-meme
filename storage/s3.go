@@ -49,18 +49,23 @@ func (store s3store) GetReader(path string, nonce [32]byte) (rc io.ReadCloser, e
 	return reader, nil
 }
 
-func (store s3store) List(path string) (*s3.ListResp, error) {
-	list, err := store.bucket.List(store.prefix+path, "", "", 10)
+func (store s3store) List(path string) ([]string, error) {
+	list, err := store.bucket.List(store.prefix+path, "", "", 0)
+
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
-	return list, nil
+	keys := []string{}
+	for _, pic := range list.Contents {
+		keys = append(keys, pic.Key)
+	}
+	return keys, nil
 }
 
 func (store s3store) PostReader(path string, file *bytes.Buffer, length int64, contentType string, nonce [32]byte) error {
 	//reader := bytes.NewReader(file)
-	fmt.Println("POST READER NOW")
+	// fmt.Println("POST READER NOW " + path)
 	err := store.bucket.PutReader(store.prefix+path, file, length, contentType, s3.Private, s3.Options{})
 	if err != nil {
 		fmt.Println("error posting file: " + err.Error())
