@@ -32,6 +32,13 @@ type Media struct {
 	Template    bool           `json:"template"`
 }
 
+type LSAT struct {
+	ID          string      `json:"id"`
+	Constraints PropertyMap `json:"constraints"`
+	Created     *time.Time  `json:"created"`
+	Updated     *time.Time  `json:"updated"`
+}
+
 // PropertyMap ...
 type PropertyMap map[string]interface{}
 

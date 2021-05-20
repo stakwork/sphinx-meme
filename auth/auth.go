@@ -16,7 +16,7 @@ type contextKey string
 var (
 	ContextKey  = contextKey("key")
 	ContextHost = contextKey("host")
-	defaultHost = "localhost:5005"
+	defaultHost = "localhost:5000"
 )
 
 // Verifier ...
