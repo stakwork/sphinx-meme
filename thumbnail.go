@@ -25,9 +25,13 @@ func MigrateThumbnails() {
 	oy := DB.getAllMedia()
 	fmt.Printf("=> %+v\n", len(oy))
 
+	thelength := len(oy)
+
 	for i, m := range oy {
-		if i > 6585 && m.Mime == "image/jpg" && m.Width == 0 && m.Height == 0 {
-			fmt.Printf("=> %+v\n", i)
+		// only special imgs have height and width
+		if m.Mime == "image/jpg" && m.Width == 0 && m.Height == 0 {
+			fmt.Printf("=> %v:%v\n", thelength, i)
+
 			tryMigrate(m.ID, m.Nonce)
 		}
 	}
@@ -47,7 +51,16 @@ func tryMigrate(muid string, nonceString string) error {
 		return err
 	}
 
-	return uploadThumb(muid, nonce, reader)
+	// do medium sized pic
+	err = uploadMediumSizePic(muid, nonce, reader)
+	if err != nil {
+		return err
+	}
+
+	// do thumbnail pic
+	// err = uploadThumb(muid, nonce, reader)
+
+	return err
 }
 
 // Axj5psD9cSYQWWwhDrgHj4EY5MotgrD79cYznantwzA=
@@ -61,7 +74,7 @@ func uploadThumb(muid string, nonce [32]byte, reader io.ReadCloser) error {
 		return err
 	}
 
-	fmt.Printf("=> uploadThumb %+v\n", muid)
+	// fmt.Printf("=> uploadThumb %+v\n", muid)
 
 	min := calcMin(img.Bounds().Max.X, img.Bounds().Max.Y)
 	croppedImg, err := cutter.Crop(img, cutter.Config{
@@ -86,6 +99,36 @@ func uploadThumb(muid string, nonce [32]byte, reader io.ReadCloser) error {
 	}
 
 	storage.Store.PostReader(muid+"_thumb", buf, int64(buf.Len()), "image/jpg", nonce)
+
+	return nil
+}
+
+func uploadMediumSizePic(muid string, nonce [32]byte, reader io.ReadCloser) error {
+	defer reader.Close()
+
+	img, err := jpeg.Decode(reader)
+	if err != nil {
+		return err
+	}
+
+	min := calcMin(img.Bounds().Max.X, img.Bounds().Max.Y)
+
+	croppedImg, err := cutter.Crop(img, cutter.Config{
+		Width: min, Height: min,
+		Anchor: image.Point{1, 1},
+		Mode:   cutter.TopLeft,
+	})
+
+	mediumPic := resize.Thumbnail(400, 400, croppedImg, resize.Lanczos3)
+
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, mediumPic, nil)
+	if err != nil {
+		should(err)
+		return err
+	}
+
+	storage.Store.PostReader(muid+"_medium", buf, int64(buf.Len()), "image/jpg", nonce)
 
 	return nil
 }

@@ -130,10 +130,14 @@ func getPublicMedia(w http.ResponseWriter, r *http.Request) {
 	}
 
 	thumb := r.URL.Query().Get("thumb")
+	medium := r.URL.Query().Get("medium")
 
 	themuid := muid
 	if thumb == "true" {
 		themuid = muid + "_thumb"
+	}
+	if medium == "true" {
+		themuid = muid + "_medium"
 	}
 
 	fmt.Println(themuid)
@@ -235,20 +239,20 @@ func getMediaByMUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false, false)
+	uploadFile(w, r, false, false, false)
 }
 
 func uploadTemplate(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, true, false)
+	uploadFile(w, r, true, false, false)
 }
 
 func uploadPublic(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false, true)
+	uploadFile(w, r, false, true, true)
 }
 
 // UploadFile uploads a file of any type
 // need a "name" of "file"
-func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool) {
+func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool, medium bool) {
 	ctx := r.Context()
 	pubKey := ctx.Value(auth.ContextKey).(string)
 
@@ -338,6 +342,10 @@ func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, 
 
 	if thumb {
 		go uploadThumb(media.ID, nonce, ioutil.NopCloser(bytes.NewReader(buf.Bytes())))
+	}
+
+	if medium {
+		go uploadMediumSizePic(media.ID, nonce, ioutil.NopCloser(bytes.NewReader(buf.Bytes())))
 	}
 
 	path := media.ID
