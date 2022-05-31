@@ -14,7 +14,12 @@ import (
 
 type contextKey string
 
-var LsatKey = contextKey("lsat")
+// HeaderAuthorization is the HTTP header field name that is used to
+// send the LSAT by REST clients.
+const (
+	HeaderAuthorization = "Authorization"
+	ContextKey = contextKey("MEME_LSAT_CAVEATS")
+)
 
 var (
 	authRegex  = regexp.MustCompile("LSAT (.*?):([a-f0-9]{64})")
@@ -71,16 +76,18 @@ func parseLsatHeader(authHeader string) (*macaroon.Macaroon, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to to unmarshal macaroon: %v", err)
 	}
-	HasCaveat(mac, "foo")
+
 	return mac, nil
 }
 
-// simple middleware to get and add LSAT auth header to context
+// this is a middleware that parses lsats from header,
+// validates the lsat token, decodes the caveats, 
+// and adds them to the request context.
 func LsatContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header["Authorization"]
 		lsat, err := getLsatAuthorizationHeader(header)
-		
+
 		if err != nil {
 			fmt.Println("No LSAT authorization header found on request")
 			next.ServeHTTP(w, r)
@@ -95,8 +102,34 @@ func LsatContext(next http.Handler) http.Handler {
 			return
 		}
 
-		caveats := mac.Caveats()
-		ctx := context.WithValue(r.Context(), LsatKey, caveats)
-		next.ServeHTTP(w, r.WithContext((ctx)))
+		caveats := make(map[string]string)
+
+		for _, rawCaveat := range mac.Caveats() {
+			caveat, err := DecodeCaveat(string(rawCaveat.Id))
+			if err != nil {
+				continue
+			}
+			caveats[caveat.Condition] = caveat.Value
+		}
+		ctx := context.WithValue(r.Context(), ContextKey, caveats)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// SetHeader sets the provided authentication elements as the default/standard
+// HTTP header for the LSAT protocol.
+// This function is pulled directly from aperture
+func SetHeader(header *http.Header, mac *macaroon.Macaroon,
+	preimage fmt.Stringer) error {
+
+	macBytes, err := mac.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	value := fmt.Sprintf(
+		authFormat, base64.StdEncoding.EncodeToString(macBytes),
+		preimage.String(),
+	)
+	header.Set(HeaderAuthorization, value)
+	return nil
 }

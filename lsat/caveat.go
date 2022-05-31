@@ -80,7 +80,6 @@ func HasCaveat(m *macaroon.Macaroon, cond string) (string, bool) {
 	var value *string
 	for _, rawCaveat := range m.Caveats() {
 		caveat, err := DecodeCaveat(string(rawCaveat.Id))
-		fmt.Println(caveat)
 		if err != nil {
 			// Ignore any unknown caveats as we can't decode them.
 			continue
