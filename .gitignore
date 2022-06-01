@@ -1,6 +1,7 @@
 sphinx-meme
 application
 frontend/*
+.vscode/*
 # .ebextensions/nginx/conf.d
 .DS_Store
 .env
