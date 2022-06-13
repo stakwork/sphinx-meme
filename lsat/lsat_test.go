@@ -1,9 +1,11 @@
 package lsat
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -72,33 +74,49 @@ func TestLsatContext(t *testing.T) {
 	rawCaveat := EncodeCaveat(caveat)
 	AddFirstPartyCaveats(mac, caveat)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		caveatMap := ctx.Value(ContextKey).(map[string]string)
-
-		if caveatMap == nil {
+		caveats := ctx.Value(ContextKey).([]Caveat)
+		if caveats == nil {
 			t.Fatalf("expected to find lsat caveat map on context")
 		} 
 		
-		if val, ok := caveatMap[condition]; !ok || val != value {
+		found := false
+		for _, c := range caveats {
+			if c.Condition == condition {
+				found = true
+			}
+		}
+
+		if !found {
 			t.Fatalf("expected key '%s' with value '%s'", condition, value)
 		}
-	
 		w.Write([]byte(rawCaveat))
 	})
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
-	if _, body := testRequest(t, ts, "GET", "/", mac); body != rawCaveat {
+	if _, body := testRequest(t, ts, "POST", "/", mac, 0); body != rawCaveat {
 		t.Fatalf(body)
 	}
 }
 
 // testing utility copied mostly from go-chi
 // https://github.com/go-chi/chi/blob/d32a83448b5f43e42bc96487c6b0b3667a92a2e4/middleware/middleware_test.go#L83
-func testRequest(t *testing.T, ts *httptest.Server, method, path string, mac *macaroon.Macaroon) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, mac *macaroon.Macaroon, fileSize int16) (*http.Response, string) {
+	// mocking file upload in the request
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "file.png")
+	bytes := make([]byte, fileSize)
+	part.Write(bytes)
+	writer.Close()
+
+	req, err := http.NewRequest(method, ts.URL+path, body)
+	req.Header.Add("Content-Type", "multipart/form-data")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
 
 	secret, _ := lntypes.MakePreimageFromStr(preimage)	
 	SetHeader(&req.Header, mac, secret)
@@ -119,6 +137,7 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, mac *ma
 		t.Fatal(err)
 		return nil, ""
 	}
+
 	defer resp.Body.Close()
 
 	return resp, string(respBody)

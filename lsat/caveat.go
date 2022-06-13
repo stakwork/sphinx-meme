@@ -101,45 +101,45 @@ func HasCaveat(m *macaroon.Macaroon, cond string) (string, bool) {
 //
 // NOTE: The caveats provided should be in the same order as in the LSAT to
 // ensure the correctness of each satisfier's SatisfyPrevious.
-// func VerifyCaveats(caveats []Caveat, satisfiers ...Satisfier) error {
-// 	// Construct a set of our satisfiers to determine which caveats we know
-// 	// how to satisfy.
-// 	caveatSatisfiers := make(map[string]Satisfier, len(satisfiers))
-// 	for _, satisfier := range satisfiers {
-// 		caveatSatisfiers[satisfier.Condition] = satisfier
-// 	}
-// 	relevantCaveats := make(map[string][]Caveat)
-// 	for _, caveat := range caveats {
-// 		if _, ok := caveatSatisfiers[caveat.Condition]; !ok {
-// 			continue
-// 		}
-// 		relevantCaveats[caveat.Condition] = append(
-// 			relevantCaveats[caveat.Condition], caveat,
-// 		)
-// 	}
+func VerifyCaveats(caveats []Caveat, satisfiers ...Satisfier) error {
+	// Construct a set of our satisfiers to determine which caveats we know
+	// how to satisfy.
+	caveatSatisfiers := make(map[string]Satisfier, len(satisfiers))
+	for _, satisfier := range satisfiers {
+		caveatSatisfiers[satisfier.Condition] = satisfier
+	}
+	relevantCaveats := make(map[string][]Caveat)
+	for _, caveat := range caveats {
+		if _, ok := caveatSatisfiers[caveat.Condition]; !ok {
+			continue
+		}
+		relevantCaveats[caveat.Condition] = append(
+			relevantCaveats[caveat.Condition], caveat,
+		)
+	}
 
-// 	for condition, caveats := range relevantCaveats {
-// 		satisfier := caveatSatisfiers[condition]
+	for condition, caveats := range relevantCaveats {
+		satisfier := caveatSatisfiers[condition]
 
-// 		// Since it's possible for a chain of caveat to exist for the
-// 		// same condition as a way to demote privileges, we'll ensure
-// 		// each one satisfies its previous.
-// 		for i, j := 0, 1; j < len(caveats); i, j = i+1, j+1 {
-// 			prevCaveat := caveats[i]
-// 			curCaveat := caveats[j]
-// 			err := satisfier.SatisfyPrevious(prevCaveat, curCaveat)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
+		// Since it's possible for a chain of caveats to exist for the
+		// same condition as a way to demote privileges, we'll ensure
+		// each one satisfies its previous.
+		for i, j := 0, 1; j < len(caveats); i, j = i+1, j+1 {
+			prevCaveat := caveats[i]
+			curCaveat := caveats[j]
+			err := satisfier.SatisfyPrevious(prevCaveat, curCaveat)
+			if err != nil {
+				return err
+			}
+		}
 
-// 		// Once we verify the previous ones, if any, we can proceed to
-// 		// verify the final one, which is the decision maker.
-// 		err := satisfier.SatisfyFinal(caveats[len(caveats)-1])
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+		// Once we verify the previous ones, if any, we can proceed to
+		// verify the final one, which is the decision maker.
+		err := satisfier.SatisfyFinal(caveats[len(caveats)-1])
+		if err != nil {
+			return err
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}

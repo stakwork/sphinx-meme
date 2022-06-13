@@ -3,6 +3,7 @@ package lsat
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -102,17 +103,56 @@ func LsatContext(next http.Handler) http.Handler {
 			return
 		}
 
-		caveats := make(map[string]string)
-
+		var caveats []Caveat
+		
 		for _, rawCaveat := range mac.Caveats() {
 			caveat, err := DecodeCaveat(string(rawCaveat.Id))
 			if err != nil {
 				continue
 			}
-			caveats[caveat.Condition] = caveat.Value
+			caveats = append(caveats, caveat)
 		}
+
 		ctx := context.WithValue(r.Context(), ContextKey, caveats)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func VerifyUploadContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// get caveats from the context 
+		// this should always be run after the LsatContext middleware
+		
+		ctx := r.Context()
+		caveats, _ := ctx.Value(ContextKey).([]Caveat)
+
+		// check file size associated with the request to compare against lsat
+		// FormFile returns the first file for the given key `file`
+		// it also returns the FileHeader so we can get the Filename,
+		// the Header and the size of the file
+		_, handler, err := r.FormFile("file")
+		if err != nil {
+			fmt.Println("Error Retrieving the File")
+			fmt.Println(err)
+			// TODO: we may want to generalize this or modularize since
+			// not all LSATs will care about having a file
+			json.NewEncoder(w).Encode("Error Retrieving the File")
+			return
+		}
+
+				// TODO: figure out how to generalize and parameterize the
+		// satisfiers so they can be configurable such that different
+		// server hosts can setup their own LSAT requirements
+
+		err = VerifyCaveats(caveats, NewUploadSatisfier(int16(handler.Size)))
+
+		if err != nil {
+			fmt.Printf("Invalid caveats on lsat %s", err)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }
 
