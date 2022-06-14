@@ -123,6 +123,7 @@ func TestVerifyUploadContext(t *testing.T) {
 			http.StatusUnauthorized,
 		},
 	}
+
 	caveatCondition := MaxUploadCapability + CondMaxUploadConstraintSuffix // large_upload_max_mb 
 	
 	for _, tt := range tests  {
@@ -183,7 +184,6 @@ func getMacaroon(condition string, value string) (mac *macaroon.Macaroon, rawCav
 	caveat := NewCaveat(condition, value)
 	rawCaveat = EncodeCaveat(caveat)
 	AddFirstPartyCaveats(mac, caveat)
-
 	return
 }
 

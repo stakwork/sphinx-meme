@@ -19,7 +19,7 @@ type contextKey string
 // send the LSAT by REST clients.
 const (
 	HeaderAuthorization = "Authorization"
-	ContextKey = contextKey("MEME_LSAT_CAVEATS")
+	ContextKey          = contextKey("MEME_LSAT_CAVEATS")
 )
 
 var (
@@ -37,25 +37,24 @@ func getLsatAuthorizationHeader(vals []string) (string, error) {
 	return "", errors.New("could not find LSAT in authorization header")
 }
 
-
-// validates auth header and returns macaroon 
+// validates auth header and returns macaroon
 // code from aperture library
 // https://github.com/lightninglabs/aperture/blob/f9927f3cbe936eebbde4c6c33691116bca850517/lsat/header.go#L54-L62
 func validateAuthHeader(authHeader string) (mac string, preimage string, err error) {
-		// LSAT tokens come in the format `LSAT [macaroon]:[(preimage)]`
-		if !authRegex.MatchString(authHeader) {
-			return "", "", fmt.Errorf("invalid "+
-				"auth header format: %s", authHeader)
-		}
+	// LSAT tokens come in the format `LSAT [macaroon]:[(preimage)]`
+	if !authRegex.MatchString(authHeader) {
+		return "", "", fmt.Errorf("invalid "+
+			"auth header format: %s", authHeader)
+	}
 
-		matches := authRegex.FindStringSubmatch(authHeader)
+	matches := authRegex.FindStringSubmatch(authHeader)
 
-		if len(matches) != 3 {
-			return "", "", fmt.Errorf("invalid "+
-				"auth header format: %s", authHeader)
-		}
+	if len(matches) != 3 {
+		return "", "", fmt.Errorf("invalid "+
+			"auth header format: %s", authHeader)
+	}
 
-		return matches[1], matches[2], nil
+	return matches[1], matches[2], nil
 }
 
 func parseLsatHeader(authHeader string) (*macaroon.Macaroon, error) {
@@ -67,7 +66,7 @@ func parseLsatHeader(authHeader string) (*macaroon.Macaroon, error) {
 
 	macBytes, err := base64.StdEncoding.DecodeString(macBase64)
 
-	if err != nil  {
+	if err != nil {
 		return nil, fmt.Errorf("base 64 decode of macaroon failed: %v", err)
 	}
 
@@ -82,7 +81,7 @@ func parseLsatHeader(authHeader string) (*macaroon.Macaroon, error) {
 }
 
 // this is a middleware that parses lsats from header,
-// validates the lsat token, decodes the caveats, 
+// validates the lsat token, decodes the caveats,
 // and adds them to the request context.
 func LsatContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,9 +93,9 @@ func LsatContext(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		mac, err := parseLsatHeader(lsat)
-		
+
 		if err != nil {
 			fmt.Printf("could not parse macaroon from authorization header %s", err)
 			http.Error(w, http.StatusText(400), 400)
@@ -104,7 +103,7 @@ func LsatContext(next http.Handler) http.Handler {
 		}
 
 		var caveats []Caveat
-		
+
 		for _, rawCaveat := range mac.Caveats() {
 			caveat, err := DecodeCaveat(string(rawCaveat.Id))
 			if err != nil {
@@ -120,9 +119,9 @@ func LsatContext(next http.Handler) http.Handler {
 
 func VerifyUploadContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// get caveats from the context 
+		// get caveats from the context
 		// this should always be run after the LsatContext middleware
-		
+
 		ctx := r.Context()
 		caveats, _ := ctx.Value(ContextKey).([]Caveat)
 
