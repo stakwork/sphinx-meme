@@ -65,16 +65,11 @@ func TestLsatContext(t *testing.T) {
 	r.Use(LsatContext)
 	
 	// setup test caveat to make sure it gets added via middleware
-	mac := &macaroon.Macaroon{}
-	macBytes, _  := base64.StdEncoding.DecodeString(macaroonBase64)
-	mac.UnmarshalBinary(macBytes)
 	condition := "foo"
 	value := "bar"
-	caveat := NewCaveat(condition, value)
-	rawCaveat := EncodeCaveat(caveat)
-	AddFirstPartyCaveats(mac, caveat)
+	mac, rawCaveat := getMacaroon(condition, value)
 
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		caveats := ctx.Value(ContextKey).([]Caveat)
 		if caveats == nil {
@@ -97,27 +92,106 @@ func TestLsatContext(t *testing.T) {
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
-	if _, body := testRequest(t, ts, "POST", "/", mac, 0); body != rawCaveat {
+	if _, body := testRequest(t, ts, "GET", "/", mac); body != rawCaveat {
 		t.Fatalf(body)
 	}
 }
 
+func TestVerifyUploadContext(t *testing.T) {
+	var tests = []struct {
+		name string
+		values []string
+		fileSize int16
+		want int
+	}{
+		{
+			"should accept requests if the file size is below caveat value",
+			[]string{"2"},
+			1,
+			http.StatusOK,
+		},
+		{
+			"should reject requests if file size is larger than caveat value",
+			[]string{"1"},
+			2,
+			http.StatusUnauthorized,
+		},
+		{
+			"should reject requests if caveats are not of increasing restrictiveness",
+			[]string{"1", "2"},
+			1,
+			http.StatusUnauthorized,
+		},
+	}
+	caveatCondition := MaxUploadCapability + CondMaxUploadConstraintSuffix // large_upload_max_mb 
+	
+	for _, tt := range tests  {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+
+			// setup macaroon with caveats, adding the first caveat on the macaroon
+			val, values := tt.values[0], tt.values[1:]
+			mac, _ := getMacaroon(caveatCondition, val)
+			
+			// add other caveats if there are any
+			if len(values) > 0 {
+				for _, v := range values {
+					c := NewCaveat(caveatCondition, v)
+					AddFirstPartyCaveats(mac, c)
+				}
+			}
+			
+			r := chi.NewRouter()
+			// middleware to make sure the caveats are on the context
+			r.Use(LsatContext)
+			// verify the caveats from the context
+			r.Use(VerifyUploadContext)
+			// a nothing route that we can call to go through the relevant middleware
+			r.Post("/", func(w http.ResponseWriter, r *http.Request) {})
+
+			// mocking file upload in the request
+			body := new(bytes.Buffer)
+			writer := multipart.NewWriter(body)
+			part, _ := writer.CreateFormFile("file", "file.png")
+			b := make([]byte, tt.fileSize)
+			part.Write(b)
+			writer.Close()
+
+			// setup request
+			req := httptest.NewRequest("POST", "/", body)
+			req.Header.Add("Content-Type", "multipart/form-data")
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			secret, _ := lntypes.MakePreimageFromStr(preimage)	
+			SetHeader(&req.Header, mac, secret)
+
+			r.ServeHTTP(recorder, req)
+			res := recorder.Result()
+
+			if res.StatusCode != tt.want {
+				t.Errorf("response is incorrect, got %d, want %d", recorder.Code, tt.want)
+			}
+		})
+
+	}
+}
+
+func getMacaroon(condition string, value string) (mac *macaroon.Macaroon, rawCaveat string) {
+	// setup test caveat to make sure it gets added via middleware
+	mac = &macaroon.Macaroon{}
+	macBytes, _  := base64.StdEncoding.DecodeString(macaroonBase64)
+	mac.UnmarshalBinary(macBytes)
+	caveat := NewCaveat(condition, value)
+	rawCaveat = EncodeCaveat(caveat)
+	AddFirstPartyCaveats(mac, caveat)
+
+	return
+}
+
 // testing utility copied mostly from go-chi
 // https://github.com/go-chi/chi/blob/d32a83448b5f43e42bc96487c6b0b3667a92a2e4/middleware/middleware_test.go#L83
-func testRequest(t *testing.T, ts *httptest.Server, method, path string, mac *macaroon.Macaroon, fileSize int16) (*http.Response, string) {
-	// mocking file upload in the request
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("file", "file.png")
-	bytes := make([]byte, fileSize)
-	part.Write(bytes)
-	writer.Close()
-
-	req, err := http.NewRequest(method, ts.URL+path, body)
-	req.Header.Add("Content-Type", "multipart/form-data")
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-
+func testRequest(t *testing.T, ts *httptest.Server, method, path string, mac *macaroon.Macaroon) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	
 	secret, _ := lntypes.MakePreimageFromStr(preimage)	
 	SetHeader(&req.Header, mac, secret)
 

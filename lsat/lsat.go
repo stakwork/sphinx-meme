@@ -140,7 +140,7 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 			return
 		}
 
-				// TODO: figure out how to generalize and parameterize the
+		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
 
