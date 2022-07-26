@@ -121,7 +121,6 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get caveats from the context
 		// this should always be run after the LsatContext middleware
-
 		ctx := r.Context()
 		caveats, _ := ctx.Value(ContextKey).([]Caveat)
 
@@ -142,8 +141,8 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
-
-		err = VerifyCaveats(caveats, NewUploadSatisfier(int16(handler.Size)))
+		fmt.Println("File size: ", handler.Size)
+		err = VerifyCaveats(caveats, NewUploadSatisfier(int64(handler.Size)))
 
 		if err != nil {
 			fmt.Printf("Invalid caveats on lsat %s", err)

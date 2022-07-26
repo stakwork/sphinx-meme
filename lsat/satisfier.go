@@ -35,7 +35,7 @@ type Satisfier struct {
 
 // pass in the file size in the request to compare against
 // the caveats
-func NewUploadSatisfier(fileSize int16) Satisfier {
+func NewUploadSatisfier(fileSize int64) Satisfier {
 	return Satisfier {
 		// example = large_upload_max_mb
 		Condition: MaxUploadCapability + CondMaxUploadConstraintSuffix,
@@ -58,12 +58,16 @@ func NewUploadSatisfier(fileSize int16) Satisfier {
 		},
 
 		SatisfyFinal: func(c Caveat) error {
+			
 			caveatValue, err := strconv.ParseInt(c.Value,  10, 16)
 			if err != nil {
 				// should never reach here 
 				return fmt.Errorf("caveat value not a valid integer")
 			}
-			if fileSize <= int16(caveatValue) {
+			
+			sizeInBytes := caveatValue * (1<<20)
+			
+			if fileSize <= sizeInBytes {
 				return nil
 			}
 
