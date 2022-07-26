@@ -9,6 +9,7 @@ services:
       context: .
       dockerfile: ./Dockerfile.dev
     restart: on-failure
+    container_name: meme.sphinx
     volumes:
       - ./memes:/app/files
       - ./:/app

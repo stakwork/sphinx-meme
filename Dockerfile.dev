@@ -14,16 +14,6 @@ COPY . .
 
 RUN CGO_ENABLED=0 go build
 
-# final stage
-# FROM alpine:latest
-
-# RUN apk add --no-cache ca-certificates openssl
-
-# COPY /app/sphinx-meme /app/
-# COPY --from=builder /app/.env /app/
-
-EXPOSE 5000
-
 RUN go install github.com/cosmtrek/air@latest
 
 COPY ./ /app/
