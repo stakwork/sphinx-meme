@@ -110,3 +110,22 @@ The returned token asserts that you are the owner of the pubkey, and lets you up
     - When a purchase is made, merchant node should call **/mymedia/{muid}** to confirm the price/TTL, and check that amount was paid before issuing the *receipt*. Afterward merchant node can call **/purchase/{muid}** to update the stats for that media.
 	- Similarly, an attachment message should check TTL before issuing a *mediaToken*
 - If a purchase message does not contain the correct amount, the sats should be returned by the merchant node in the *purchase_deny* message
+
+
+## Local Development
+This repo includes a secondary Dockerfile `Dockerfile.dev` specifically
+for developing locally against a [sphinx-stack](https://github.com/stakwork/sphinx-stack) environment. There is a docker-compose file included
+with this meme-server repo for making sure to connect to the
+docker network created by sphinx-stack since meme-server
+needs to be able to communicate with those services (e.g. db, aperture, etc.).
+
+The development Dockerfile runs the meme server using [air](https://github.com/cosmtrek/air)
+which watches for changes in the code files and recompiles the code on save. 
+Having this in a docker container allows the server to interface with the `sphinx-stack`
+services. 
+
+Simply run `docker-compose up` in your terminal to run the `air` enabled server. 
+
+You will have to follow the local dev instructions in the 
+[sphinx stack readme](https://github.com/stakwork/sphinx-stack/alts/README.md) to make sure
+it's running in a way that is compatible with this setup. 

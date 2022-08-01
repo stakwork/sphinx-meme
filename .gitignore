@@ -14,6 +14,7 @@ files/*
 !files/.gitkeep
 storage/files/*.txt
 !storage/files/test.txt
+tmp/*
 
 tls.cert
 admin.macaroon
