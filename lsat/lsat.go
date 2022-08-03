@@ -149,7 +149,6 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
-		fmt.Println("File size: ", handler.Size)
 		err = VerifyCaveats(caveats, NewUploadSatisfier(int64(handler.Size)))
 
 		if err != nil {
@@ -202,7 +201,7 @@ func SetMaxUploadValue(next http.Handler) http.Handler {
 						val = _val
 					}
 				}
-				
+
 				if val > 0 {
 					ctx := context.WithValue(r.Context(), MaxUploadContextKey, val)
 					next.ServeHTTP(w,r.WithContext(ctx))

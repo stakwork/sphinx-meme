@@ -58,7 +58,7 @@ func initRouter() *chi.Mux {
 		r.Use(jwtauth.Authenticator)
 		r.Use(auth.HostContext)
 		r.Use(auth.PubKeyContext)
-
+		r.Use(lsat.GetMaxUploadSizeContext)
 		r.Get("/mymedia", getMyMedia)              // only owner
 		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
 		r.Get("/media/{muid}", getMediaByMUID)
@@ -75,26 +75,19 @@ func initRouter() *chi.Mux {
 		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 	})
 
-	r.Group(func (r chi.Router) {
+	r.Group(func(r chi.Router) {
 		// validate lsat and add caveats to request context for other middleware
 		r.Use(lsat.LsatContext)
 		// verifies the request data against the lsat's caveats
 		r.Use(lsat.VerifyUploadContext)
 		r.Use(lsat.SetMaxUploadValue)
-		r.Get("/largefile", testPath)
+		r.Use(lsat.GetMaxUploadSizeContext)
 		// we're segregating the upload paths for now
 		// so this will be for large files that require payment
-		r.Post("/largefile", uploadLargeEncryptedFile)
+		r.Post("/largefile", uploadEncryptedFile)
 	})
 
 	return r
-}
-
-
-
-func testPath(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode("{'foo':'bar' }")
 }
 
 func getPodcast(w http.ResponseWriter, r *http.Request) {
@@ -259,50 +252,37 @@ func getMediaByMUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false, false, false, false)
+	uploadFile(w, r, false, false, false)
 }
 
 func uploadLargeEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r,  false, false, false, true)
+	uploadFile(w, r, false, false, false)
 }
 
 func uploadTemplate(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, true, false, false, false)
+	uploadFile(w, r, true, false, false)
 }
 
 func uploadPublic(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false, true, true, false)
+	uploadFile(w, r, false, true, true)
 }
 
 // UploadFile uploads a file of any type
 // need a "name" of "file"
-func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool, medium bool, large bool) {
-	// ctx := r.Context()
-	// pubKey := ctx.Value(auth.ContextKey).(string)
-	pubKey := "abcdefg"
+func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool, medium bool) {
+	ctx := r.Context()
+	pubKey := ctx.Value(auth.ContextKey).(string)
 	fmt.Println("File Upload ===> ")
 
-	// 32MB in bytes
-	MAX_UPLOAD_SIZE := int64(32<<20+512)
+	MAX_UPLOAD_SIZE := ctx.Value(lsat.MaxUploadSizeContextKey).(int64)
 
-	if large {
-		ctx := r.Context()
-		size, ok := ctx.Value(lsat.MaxUploadContextKey).(int64)
-		fmt.Println("context val: ", size)
-		if !ok {
-			fmt.Println("Ran into an error parsing caveat context key")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		// convert to bytes w/ buffer
-		MAX_UPLOAD_SIZE = size << 20 + 512
-	}
+	fmt.Println("File upload sizes restricted up to", MAX_UPLOAD_SIZE, "bytes")
 
 	// ensure that the entire body (not just each chunk)
 	// is no bigger than maximum
-	// https://pkg.go.dev/net/http#MaxBytesReader		
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20+512)
-	
+	// https://pkg.go.dev/net/http#MaxBytesReader
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
+
 	if err := r.ParseMultipartForm(1000); err != nil {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		json.NewEncoder(w).Encode("File too big")
@@ -313,7 +293,7 @@ func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, 
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file
 	file, handler, err := r.FormFile("file")
-	
+
 	// in case other size checks fail
 	if handler.Size > MAX_UPLOAD_SIZE {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
