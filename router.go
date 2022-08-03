@@ -75,12 +75,17 @@ func initRouter() *chi.Mux {
 		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 	})
 
+	// a set of middleware and a route for size restricted
+	// uploads that use LSATs for authorization
 	r.Group(func(r chi.Router) {
 		// validate lsat and add caveats to request context for other middleware
 		r.Use(lsat.LsatContext)
 		// verifies the request data against the lsat's caveats
 		r.Use(lsat.VerifyUploadContext)
+		// this sets a context value for max upload size based on the lsat caveat
 		r.Use(lsat.SetMaxUploadValue)
+		// sets a value in the context for what the upload limits
+		// based on routes, environment variable, and caveat restrictions are set
 		r.Use(lsat.GetMaxUploadSizeContext)
 		// we're segregating the upload paths for now
 		// so this will be for large files that require payment

@@ -21,7 +21,7 @@ services:
       - LOCAL_ENCRYPTION_KEY=88303a55f5829d9e35936364204bcb007fe330db649902fa1085a7bce3732347
       - HOST=localhost:5555
       - DATABASE_URL=postgres://postgres:sphinx@db.sphinx:5432/postgres?sslmode=disable
-      - MAX_FREE_UPLOAD_SIZE_MB=1
+      - MAX_FREE_UPLOAD_SIZE_MB=${MAX_FREE_UPLOAD_SIZE_MB}
       - RESTRICT_UPLOAD_SIZE=${RESTRICT_UPLOAD_SIZE}
   
 networks:

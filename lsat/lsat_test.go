@@ -101,7 +101,7 @@ func TestVerifyUploadContext(t *testing.T) {
 	var tests = []struct {
 		name string
 		values []string
-		fileSize int32
+		fileSize int64
 		want int
 	}{
 		{
