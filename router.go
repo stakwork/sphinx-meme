@@ -96,7 +96,7 @@ func initRouter() *chi.Mux {
 		r.Use(lsat.SetMaxUploadValue)
 		// sets a value in the context for what the upload limits
 		// based on routes, environment variable, and caveat restrictions are set
-		r.Use(lsat.GetMaxUploadSizeContext)
+		r.Use(lsat.GetMaxUploadSizeContextLarge)
 		// we're segregating the upload paths for now
 		// so this will be for large files that require payment
 		r.Post("/largefile", uploadEncryptedFile)

@@ -6,14 +6,21 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 )
 
 func GetMaxUploadSizeContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.String()
+		getMaxSize(w, r, next, false)
+	})
+}
 
-		large := strings.Contains(path, "largefile")
+func GetMaxUploadSizeContextLarge(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		getMaxSize(w, r, next, true)
+	})
+}
+
+func getMaxSize(w http.ResponseWriter, r *http.Request, next http.Handler, large bool) {
 		ctx := r.Context()
 
 		// set default to 32MB in bytes
@@ -58,5 +65,4 @@ func GetMaxUploadSizeContext(next http.Handler) http.Handler {
 
 		ctx = context.WithValue(ctx, MaxUploadSizeContextKey, maxBytes)
 		next.ServeHTTP(w, r.WithContext(ctx))
-	})
 }
