@@ -9,21 +9,13 @@ import (
 	"strings"
 )
 
-const MaxUploadSizeContextKey = contextKey("MAX_UPLOAD_SIZE")
-
 func GetMaxUploadSizeContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.String()
-		
-		// skip any routes that don't have anything to do with files
-		if !strings.Contains(path, "file") {
-			next.ServeHTTP(w, r)
-			return
-		}
 
 		large := strings.Contains(path, "largefile")
 		ctx := r.Context()
-		
+
 		// set default to 32MB in bytes
 		maxBytes := int64(32<<20+512)
 		
@@ -36,7 +28,7 @@ func GetMaxUploadSizeContext(next http.Handler) http.Handler {
 		RESTRICT_UPLOAD_SIZE := os.Getenv("RESTRICT_UPLOAD_SIZE")
 		restrictSize, _ := strconv.ParseBool(RESTRICT_UPLOAD_SIZE)
 		if RESTRICT_UPLOAD_SIZE != "" && restrictSize  && large {
-			size, ok := ctx.Value(MaxUploadContextKey).(int64)
+			size, ok := ctx.Value(MaxUploadSizeContextKey).(int64)
 			if !ok {
 				fmt.Println("Ran into an error parsing caveat context key")
 				w.WriteHeader(http.StatusBadRequest)

@@ -294,7 +294,8 @@ func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, 
 	// https://pkg.go.dev/net/http#MaxBytesReader
 	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
 
-	if err := r.ParseMultipartForm(1000); err != nil {
+	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
+		fmt.Println("err:", err)
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		json.NewEncoder(w).Encode("File too big")
 		return

@@ -21,7 +21,7 @@ type contextKey string
 const (
 	HeaderAuthorization = "Authorization"
 	ContextKey          = contextKey("MEME_LSAT_CAVEATS")
-	MaxUploadContextKey = contextKey("MAX_UPLOAD_SIZE")
+	MaxUploadSizeContextKey = contextKey("MAX_UPLOAD_SIZE")
 )
 
 var (
@@ -203,7 +203,7 @@ func SetMaxUploadValue(next http.Handler) http.Handler {
 				}
 
 				if val > 0 {
-					ctx := context.WithValue(r.Context(), MaxUploadContextKey, val)
+					ctx := context.WithValue(r.Context(), MaxUploadSizeContextKey, val)
 					next.ServeHTTP(w,r.WithContext(ctx))
 					return
 				}
