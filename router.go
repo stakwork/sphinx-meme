@@ -53,25 +53,35 @@ func initRouter() *chi.Mux {
 		r.Get("/public/{muid}", getPublicMedia)
 	})
 
+	// route for getting media files
+	// same as put/post but without lsat middleware
+	// to avoid any performance hits from contexts
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Verifier(auth.TokenAuth))
+		r.Use(jwtauth.Authenticator)
+		r.Use(auth.HostContext)
+		r.Use(auth.PubKeyContext)
+		
+		r.Get("/mymedia", getMyMedia)              // only owner
+		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
+		r.Get("/media/{muid}", getMediaByMUID)
+		r.Get("/template/{muid}", getTemplate)
+		r.Get("/templates", getTemplates)
+		r.Get("/file/{token}", getMedia)
+	})
+
+	// route for updating or adding media files
+	// with lsat middleware support
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Verifier(auth.TokenAuth))
 		r.Use(jwtauth.Authenticator)
 		r.Use(auth.HostContext)
 		r.Use(auth.PubKeyContext)
 		r.Use(lsat.GetMaxUploadSizeContext)
-		r.Get("/mymedia", getMyMedia)              // only owner
-		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
-		r.Get("/media/{muid}", getMediaByMUID)
-
+		
 		r.Post("/file", uploadEncryptedFile)
-		r.Get("/file/{token}", getMedia)
-
 		r.Post("/public", uploadPublic)
-
 		r.Post("/template", uploadTemplate)
-		r.Get("/template/{muid}", getTemplate)
-		r.Get("/templates", getTemplates)
-
 		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 	})
 
@@ -257,10 +267,6 @@ func getMediaByMUID(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadEncryptedFile(w http.ResponseWriter, r *http.Request) {
-	uploadFile(w, r, false, false, false)
-}
-
-func uploadLargeEncryptedFile(w http.ResponseWriter, r *http.Request) {
 	uploadFile(w, r, false, false, false)
 }
 
