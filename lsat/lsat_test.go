@@ -101,7 +101,7 @@ func TestVerifyUploadContext(t *testing.T) {
 	var tests = []struct {
 		name string
 		values []string
-		fileSize int16
+		fileSize int64
 		want int
 	}{
 		{
@@ -112,8 +112,8 @@ func TestVerifyUploadContext(t *testing.T) {
 		},
 		{
 			"should reject requests if file size is larger than caveat value",
-			[]string{"1"},
-			2,
+			[]string{"32"},
+			33,
 			http.StatusUnauthorized,
 		},
 		{
@@ -154,7 +154,7 @@ func TestVerifyUploadContext(t *testing.T) {
 			body := new(bytes.Buffer)
 			writer := multipart.NewWriter(body)
 			part, _ := writer.CreateFormFile("file", "file.png")
-			b := make([]byte, tt.fileSize)
+			b := make([]byte, tt.fileSize * (1<<20)) // convert size to bytes
 			part.Write(b)
 			writer.Close()
 

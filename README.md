@@ -129,3 +129,83 @@ Simply run `docker-compose up` in your terminal to run the `air` enabled server.
 You will have to follow the local dev instructions in the 
 [sphinx stack readme](https://github.com/stakwork/sphinx-stack/alts/README.md) to make sure
 it's running in a way that is compatible with this setup. 
+
+## Optional Paywall for Uploading Large Files
+The [Sphinx Stack](https://github.com/stakwork/sphinx-stack) now has support for LSAT-enabled paywalls.
+Meme server leverages this for protected routes for uploading large files. 
+
+If you do nothing, meme server will continue to work as before with an upper size limit of 32MB. 
+
+The easiest way to enable the paywall is using docker compose with sphinx stack. This will probably
+be simplified in the future, with better docker images, etc., but for now the setup looks like this:
+
+### In Sphinx Stack
+Aperture is the proxy server, developed by lightning Labs, that issues LSATs and is the first 
+line of defense for validation. This is run by sphinx-stack via docker-compose. 
+
+There is a yaml file used for configuring Aperture. The relevant fields (that can be left at default) are:
+
+```yaml
+constraints:
+      "large_upload_max_mb": "32"
+
+authwhitelistpaths:
+	# update this to be a regex to catch all
+	# paths you DON'T want protected
+```
+
+If everything is set, you'll want to run sphinx stack _with_ aperture and etcd and _without_ meme:
+
+```shell
+$ docker compose -f docker-compose.yml --profile aperture --project-directory . up exclude-services
+```
+
+### In Meme 
+There are two environment variables we care about, which can  be seen in the local
+`docker-compose.yaml` file: `MAX_FREE_UPLOAD_SIZE_MB` (int) and `RESTRICT_UPLOAD_SIZE` (bool).
+
+
+#### `RESTRICT_UPLOAD_SIZE`
+This is our initial "switch" to turn on the protections. If this isn't turned on 
+then the default 32MB is used for all file upload paths (except `/largefile` 
+will always require an LSAT if aperture is running as a proxy). 
+Set this to `1` or `true` to turn on restrictions.
+
+#### `MAX_FREE_UPLOAD_SIZE_MB`
+This tells the server how big free uploads should be. This is configurable, but it defaults to 1MB. So if `RESTRICT_UPLOAD_SIZE` is enabled but this is not, 
+then upload restrictions will kick in at >1MB.
+
+#### Usage
+To turn on the paywall with sphinx-stack running using the commands above, 
+simply run the following from the meme directory:
+
+```shell
+$ RESTRICT_UPLOAD_SIZE=true MAX_FREE_UPLOAD_SIZE_MB=2 docker compose up
+```
+
+(This will also start up a development environment that rebuilds and restarts
+the server if a file is changed.)
+
+Now a request `POST /file` will work as before EXCEPT will not allow
+any requests with file attachments larger than 2MB. 
+
+Because aperture is running, all requests to `/largefile` will require
+an LSAT.  `POST /largefile` with an LSAT and you will be able to upload
+anything up to 32MB (which is what aperture sets in the LSAT caveats).
+
+### LSAT Troubleshooting
+A couple useful tools for troubleshooting are [Postman](https://postman.com) for
+easily creating and editing http requests, and the [LSAT Playground](https://lsat-playground.vercel.app/#caveats)
+where you can inspect and manipulate LSATs. 
+
+One interesting thing to try is experimenting with LSAT delegation. 
+
+Take an LSAT that's returned from aperture and paste it into the caveats
+section in the playground. You'll see a constraint `large_upload_max_mb=32`.
+Now we can add a new constraint to that LSAT: `large_upload_max_mb=3`. Meme
+will enforce a restriction that any newer caveats must be increasingly restrictive
+such that you couldn't add a caveat where the max is larger than the 32
+of the original LSAT.  
+The new LSAT macaroon can then be shared with someone else (and is impossible
+to revert) and anyone with this LSAT will be restricted to uploads of no
+more than 3MB. 

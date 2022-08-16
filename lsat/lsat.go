@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/macaroon.v2"
@@ -20,6 +21,7 @@ type contextKey string
 const (
 	HeaderAuthorization = "Authorization"
 	ContextKey          = contextKey("MEME_LSAT_CAVEATS")
+	MaxUploadSizeContextKey = contextKey("MAX_UPLOAD_SIZE")
 )
 
 var (
@@ -117,13 +119,18 @@ func LsatContext(next http.Handler) http.Handler {
 	})
 }
 
+func GetLsatContextCaveats(r *http.Request) []Caveat {
+	ctx := r.Context()
+	caveats, _ := ctx.Value(ContextKey).([]Caveat)
+
+	return caveats
+}
+
 func VerifyUploadContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get caveats from the context
 		// this should always be run after the LsatContext middleware
-
-		ctx := r.Context()
-		caveats, _ := ctx.Value(ContextKey).([]Caveat)
+		caveats := GetLsatContextCaveats(r)
 
 		// check file size associated with the request to compare against lsat
 		// FormFile returns the first file for the given key `file`
@@ -142,8 +149,7 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
-
-		err = VerifyCaveats(caveats, NewUploadSatisfier(int16(handler.Size)))
+		err = VerifyCaveats(caveats, NewUploadSatisfier(int64(handler.Size)))
 
 		if err != nil {
 			fmt.Printf("Invalid caveats on lsat %s", err)
@@ -171,4 +177,38 @@ func SetHeader(header *http.Header, mac *macaroon.Macaroon,
 	)
 	header.Set(HeaderAuthorization, value)
 	return nil
+}
+
+func SetMaxUploadValue(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			caveats := GetLsatContextCaveats(r)
+			if len(caveats) != 0 {
+				// We need to check if this is an authenticated request.
+				// If it has lsat caveats and it got this far, then it's authorized.
+				// If it doesn't, then we can just ignore
+				condition := MaxUploadCapability + CondMaxUploadConstraintSuffix
+				val := int64(0)
+				for _, caveat :=  range caveats {
+					if (caveat.Condition == condition) {
+						_val, err := strconv.ParseInt(caveat.Value, 10, 16)
+						if err != nil {
+							fmt.Println("Could not convert caveat value to int: ", caveat.Value)
+							w.WriteHeader(http.StatusBadRequest)
+							return
+						}
+						// keep going in loop in case there are other more restrictive
+						// values. The last one is all we care about
+						val = _val
+					}
+				}
+
+				if val > 0 {
+					ctx := context.WithValue(r.Context(), MaxUploadSizeContextKey, val)
+					next.ServeHTTP(w,r.WithContext(ctx))
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+	})
 }

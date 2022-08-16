@@ -22,6 +22,7 @@ import (
 	"github.com/stakwork/sphinx-meme/ecdsa"
 	"github.com/stakwork/sphinx-meme/frontend"
 	"github.com/stakwork/sphinx-meme/ldat"
+	"github.com/stakwork/sphinx-meme/lsat"
 	"github.com/stakwork/sphinx-meme/storage"
 )
 
@@ -52,26 +53,53 @@ func initRouter() *chi.Mux {
 		r.Get("/public/{muid}", getPublicMedia)
 	})
 
+	// route for getting media files
+	// same as put/post but without lsat middleware
+	// to avoid any performance hits from contexts
 	r.Group(func(r chi.Router) {
 		r.Use(auth.Verifier(auth.TokenAuth))
 		r.Use(jwtauth.Authenticator)
 		r.Use(auth.HostContext)
 		r.Use(auth.PubKeyContext)
-
+		
 		r.Get("/mymedia", getMyMedia)              // only owner
 		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
 		r.Get("/media/{muid}", getMediaByMUID)
-
-		r.Post("/file", uploadEncryptedFile)
-		r.Get("/file/{token}", getMedia)
-
-		r.Post("/public", uploadPublic)
-
-		r.Post("/template", uploadTemplate)
 		r.Get("/template/{muid}", getTemplate)
 		r.Get("/templates", getTemplates)
+		r.Get("/file/{token}", getMedia)
+	})
 
+	// route for updating or adding media files
+	// with lsat middleware support
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Verifier(auth.TokenAuth))
+		r.Use(jwtauth.Authenticator)
+		r.Use(auth.HostContext)
+		r.Use(auth.PubKeyContext)
+		r.Use(lsat.GetMaxUploadSizeContext)
+		
+		r.Post("/file", uploadEncryptedFile)
+		r.Post("/public", uploadPublic)
+		r.Post("/template", uploadTemplate)
 		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
+	})
+
+	// a set of middleware and a route for size restricted
+	// uploads that use LSATs for authorization
+	r.Group(func(r chi.Router) {
+		// validate lsat and add caveats to request context for other middleware
+		r.Use(lsat.LsatContext)
+		// verifies the request data against the lsat's caveats
+		r.Use(lsat.VerifyUploadContext)
+		// this sets a context value for max upload size based on the lsat caveat
+		r.Use(lsat.SetMaxUploadValue)
+		// sets a value in the context for what the upload limits
+		// based on routes, environment variable, and caveat restrictions are set
+		r.Use(lsat.GetMaxUploadSizeContextLarge)
+		// we're segregating the upload paths for now
+		// so this will be for large files that require payment
+		r.Post("/largefile", uploadEncryptedFile)
 	})
 
 	return r
@@ -255,19 +283,36 @@ func uploadPublic(w http.ResponseWriter, r *http.Request) {
 func uploadFile(w http.ResponseWriter, r *http.Request, measureDimensions bool, thumb bool, medium bool) {
 	ctx := r.Context()
 	pubKey := ctx.Value(auth.ContextKey).(string)
-
 	fmt.Println("File Upload ===> ")
 
-	// max of 32 MB files?
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	MAX_UPLOAD_SIZE := ctx.Value(lsat.MaxUploadSizeContextKey).(int64)
+
+	fmt.Println("File upload sizes restricted up to", MAX_UPLOAD_SIZE, "bytes")
+
+	// ensure that the entire body (not just each chunk)
+	// is no bigger than maximum
+	// https://pkg.go.dev/net/http#MaxBytesReader
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
+
+	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
+		fmt.Println("err:", err)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		json.NewEncoder(w).Encode("File too big")
 		return
 	}
+
 	// FormFile returns the first file for the given key `file`
 	// it also returns the FileHeader so we can get the Filename,
 	// the Header and the size of the file
 	file, handler, err := r.FormFile("file")
+
+	// in case other size checks fail
+	if handler.Size > MAX_UPLOAD_SIZE {
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		json.NewEncoder(w).Encode("File too big")
+		return
+	}
+
 	if err != nil {
 		fmt.Println("Error Retrieving the File")
 		fmt.Println(err)
