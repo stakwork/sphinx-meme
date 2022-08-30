@@ -16,6 +16,7 @@ type contextKey string
 var (
 	ContextKey  = contextKey("key")
 	ContextHost = contextKey("host")
+	ReadonlyKey = contextKey("readonly")
 	defaultHost = "localhost:5000"
 )
 
@@ -71,6 +72,20 @@ func HostContext(next http.Handler) http.Handler {
 	//fmt.Println(host)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), ContextHost, host)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// NotReadOnlyContext makes sure its not a "readonly" JWT
+func NotReadOnlyContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, claims, _ := jwtauth.FromContext(r.Context())
+		readonly, ok := claims["readonly"].(bool)
+		if ok && readonly == true {
+			http.Error(w, http.StatusText(401), 401)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ReadonlyKey, true)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

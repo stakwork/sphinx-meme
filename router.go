@@ -61,7 +61,7 @@ func initRouter() *chi.Mux {
 		r.Use(jwtauth.Authenticator)
 		r.Use(auth.HostContext)
 		r.Use(auth.PubKeyContext)
-		
+
 		r.Get("/mymedia", getMyMedia)              // only owner
 		r.Get("/mymedia/{muid}", getMyMediaByMUID) // only owner
 		r.Get("/media/{muid}", getMediaByMUID)
@@ -77,8 +77,9 @@ func initRouter() *chi.Mux {
 		r.Use(jwtauth.Authenticator)
 		r.Use(auth.HostContext)
 		r.Use(auth.PubKeyContext)
+		r.Use(auth.NotReadOnlyContext)
 		r.Use(lsat.GetMaxUploadSizeContext)
-		
+
 		r.Post("/file", uploadEncryptedFile)
 		r.Post("/public", uploadPublic)
 		r.Post("/template", uploadTemplate)

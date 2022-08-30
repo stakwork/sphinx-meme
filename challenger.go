@@ -37,6 +37,7 @@ func verify(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	sig := r.FormValue("sig")
 	pubkey := r.FormValue("pubkey")
+	readonly := r.FormValue("readonly")
 	fmt.Printf("id %s\n", id)
 	fmt.Printf("sig %s\n", sig)
 	fmt.Printf("pubkey %s\n", pubkey)
@@ -81,6 +82,9 @@ func verify(w http.ResponseWriter, r *http.Request) {
 	claims := jwt.MapClaims{
 		"key": pubKey,
 		"exp": auth.ExpireInHours(24 * 7),
+	}
+	if readonly != "" {
+		claims["readonly"] = true
 	}
 	fmt.Printf("CLAIMS: %+v\n", claims)
 	_, tokenString, err := auth.TokenAuth.Encode(claims)
