@@ -10,4 +10,5 @@ const (
 	CondCapabilitiesSuffix        = "_capabilities"
 	MaxUploadCapability           = "large_upload"
 	CondMaxUploadConstraintSuffix = "_max_mb"
+	CondValidForConstraintSuffix = "_valid_for_seconds"
 )

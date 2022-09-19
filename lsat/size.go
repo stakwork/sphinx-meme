@@ -26,7 +26,7 @@ func getMaxSize(w http.ResponseWriter, r *http.Request, next http.Handler, large
 		// set default to 32MB in bytes
 		maxBytes := int64(32<<20+512)
 		
-		// Can optional turn on via environment variable the ability to
+		// Can optionally turn on via environment variable the ability to
 		// enforce file size restrictions by LSAT. If Aperture is running
 		// as a proxy already then the file path will already require an LSAT
 		// to access. If aperture is not running but the environment variable

@@ -5,9 +5,9 @@ import (
 	"strconv"
 )
 
-// this whole file is just copied from lightning labs' aperture
-// these are utility functions for working with caveats
-// see source for sample satisfiers:
+// This file is based on lightning labs' aperture's satisfiers.
+// These are utility functions for working with caveats.
+// See source for sample satisfiers:
 // https://github.com/lightninglabs/aperture/blob/master/lsat/satisfier.go
 
 // Satisfier provides a generic interface to satisfy a caveat based on its
@@ -33,9 +33,11 @@ type Satisfier struct {
 }
 
 
-// pass in the file size in the request to compare against
-// the caveats
-func NewUploadSatisfier(fileSize int64) Satisfier {
+// A satisfier that takes in the file size in the request to compare 
+// against the caveats and makes sure that the size is less than
+// the final caveat and that each matching caveat is increasingly
+// restrictive.
+func NewUploadSizeSatisfier(fileSize int64) Satisfier {
 	return Satisfier {
 		// example = large_upload_max_mb
 		Condition: MaxUploadCapability + CondMaxUploadConstraintSuffix,

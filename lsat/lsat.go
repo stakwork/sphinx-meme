@@ -59,6 +59,8 @@ func validateAuthHeader(authHeader string) (mac string, preimage string, err err
 	return matches[1], matches[2], nil
 }
 
+// Get the macaroon from the lsat header. Returns a base64 encoded
+// macaroon.
 func parseLsatHeader(authHeader string) (*macaroon.Macaroon, error) {
 	macBase64, _, err := validateAuthHeader(authHeader)
 
@@ -119,6 +121,8 @@ func LsatContext(next http.Handler) http.Handler {
 	})
 }
 
+// utility function for pulling out the caveats from
+// the request handler's context
 func GetLsatContextCaveats(r *http.Request) []Caveat {
 	ctx := r.Context()
 	caveats, _ := ctx.Value(ContextKey).([]Caveat)
@@ -126,6 +130,9 @@ func GetLsatContextCaveats(r *http.Request) []Caveat {
 	return caveats
 }
 
+// This is a middleware that will check for the caveats on the context.
+// All caveats that we want to make sure are satisfied will be checked here.
+// A call to VerifyCaveats is made where all relevant satisfiers are passed in.
 func VerifyUploadContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get caveats from the context
@@ -149,7 +156,7 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
-		err = VerifyCaveats(caveats, NewUploadSatisfier(int64(handler.Size)))
+		err = VerifyCaveats(caveats, NewUploadSizeSatisfier(int64(handler.Size)))
 
 		if err != nil {
 			fmt.Printf("Invalid caveats on lsat %s", err)
