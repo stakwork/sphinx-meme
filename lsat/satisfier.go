@@ -77,3 +77,52 @@ func NewUploadSizeSatisfier(fileSize int64) Satisfier {
 		},
 	}
 }
+
+// A satisfier to check if an LSAT is expired or not.
+// It takes a capability prefix which allows support for different expirations
+// for different services or constraints. E.g. you can upload for 6 months
+// but can read data for 12 months. 
+// The Satisfier takes a creationTime for when the LSAT was created to compare against the expiration(s) 
+// in the caveats and the currentTimestamp which is passed in as the third argument. The satisfier
+// will also make sure that each subsequent caveat of the same condition only has increasingly
+// strict expirations.
+func IsExpiredSatisfier(capabilityPrefix string, creationTime int64, currentTimestamp int64) Satisfier {
+	return Satisfier {
+		Condition: capabilityPrefix + CondValidForConstraintSuffix,
+
+		// check that each caveat is more restrictive than the previous
+		SatisfyPrevious: func(prev, cur Caveat) error {
+			prevValue, prevValErr := strconv.ParseInt(prev.Value, 10, 16)
+			currValue, currValErr := strconv.ParseInt(cur.Value, 10, 16)
+			if prevValErr != nil || currValErr != nil {
+				return fmt.Errorf("caveat value not a valid integer")
+			}
+			
+			// to be valid, each subsequent expiration time must be sooner (smaller) than previous
+			if currValue > prevValue {
+				return fmt.Errorf("%s caveat violates increasing " +
+				"restrictiveness", capabilityPrefix + CondValidForConstraintSuffix)
+			}
+			
+			return nil
+		},
+
+		// make sure that the final relevant caveat is not passed
+		// the current date/time
+		SatisfyFinal: func(c Caveat) error {
+
+			secondsUntilExpiration, err := strconv.ParseInt(c.Value, 10, 16)
+
+			if err != nil {
+				// should never reach here 
+				return fmt.Errorf("caveat value not a valid integer")
+			}
+
+			if currentTimestamp - creationTime < secondsUntilExpiration {
+				return nil
+			}
+			
+			return fmt.Errorf("not authorized to upload file. LSAT has expired")
+		},
+	}
+}
