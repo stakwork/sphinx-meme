@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/macaroon.v2"
 )
@@ -156,7 +157,7 @@ func VerifyUploadContext(next http.Handler) http.Handler {
 		// TODO: figure out how to generalize and parameterize the
 		// satisfiers so they can be configurable such that different
 		// server hosts can setup their own LSAT requirements
-		err = VerifyCaveats(caveats, NewUploadSizeSatisfier(int64(handler.Size)))
+		err = VerifyCaveats(caveats, NewUploadSizeSatisfier(int64(handler.Size)), IsExpiredSatisfier(time.Now().Unix()))
 
 		if err != nil {
 			fmt.Printf("Invalid caveats on lsat %s", err)

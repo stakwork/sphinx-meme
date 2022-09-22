@@ -92,11 +92,11 @@ func IsExpiredSatisfier(currentTimestamp int64) Satisfier {
 		SatisfyPrevious: func(prev, cur Caveat) error {
 			prevValue, prevValErr := strconv.ParseInt(prev.Value, 10, 64)
 			currValue, currValErr := strconv.ParseInt(cur.Value, 10, 64)
+			
 			if prevValErr != nil || currValErr != nil {
 				return fmt.Errorf("caveat value not a valid integer")
 			}
 			
-			fmt.Println("hello? ", prevValErr)
 			prevTime := time.Unix(prevValue, 0)
 			currTime := time.Unix(currValue, 0)
 			
