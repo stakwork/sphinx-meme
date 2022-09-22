@@ -3,6 +3,7 @@ package lsat
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 // This file is based on lightning labs' aperture's satisfiers.
@@ -79,29 +80,32 @@ func NewUploadSizeSatisfier(fileSize int64) Satisfier {
 }
 
 // A satisfier to check if an LSAT is expired or not.
-// It takes a capability prefix which allows support for different expirations
-// for different services or constraints. E.g. you can upload for 6 months
-// but can read data for 12 months. 
-// The Satisfier takes a creationTime for when the LSAT was created to compare against the expiration(s) 
+// The Satisfier takes a expirationTime for when the LSAT was created to compare against the expiration(s) 
 // in the caveats and the currentTimestamp which is passed in as the third argument. The satisfier
 // will also make sure that each subsequent caveat of the same condition only has increasingly
 // strict expirations.
-func IsExpiredSatisfier(capabilityPrefix string, creationTime int64, currentTimestamp int64) Satisfier {
+func IsExpiredSatisfier(currentTimestamp int64) Satisfier {
 	return Satisfier {
-		Condition: capabilityPrefix + CondValidForConstraintSuffix,
+		Condition: MemeServerServicePrefix + TimeoutConstraintSuffix,
 
 		// check that each caveat is more restrictive than the previous
 		SatisfyPrevious: func(prev, cur Caveat) error {
-			prevValue, prevValErr := strconv.ParseInt(prev.Value, 10, 16)
-			currValue, currValErr := strconv.ParseInt(cur.Value, 10, 16)
+			prevValue, prevValErr := strconv.ParseInt(prev.Value, 10, 64)
+			currValue, currValErr := strconv.ParseInt(cur.Value, 10, 64)
 			if prevValErr != nil || currValErr != nil {
 				return fmt.Errorf("caveat value not a valid integer")
 			}
 			
-			// to be valid, each subsequent expiration time must be sooner (smaller) than previous
-			if currValue > prevValue {
+			fmt.Println("hello? ", prevValErr)
+			prevTime := time.Unix(prevValue, 0)
+			currTime := time.Unix(currValue, 0)
+			
+			// Satisfier should fail if a previous timestamp in the list is
+			// earlier than ones after it b/c that means they are getting
+			// more permissive. 
+			if prevTime.Before(currTime) {
 				return fmt.Errorf("%s caveat violates increasing " +
-				"restrictiveness", capabilityPrefix + CondValidForConstraintSuffix)
+				"restrictiveness", MemeServerServicePrefix + TimeoutConstraintSuffix)
 			}
 			
 			return nil
@@ -111,14 +115,17 @@ func IsExpiredSatisfier(capabilityPrefix string, creationTime int64, currentTime
 		// the current date/time
 		SatisfyFinal: func(c Caveat) error {
 
-			secondsUntilExpiration, err := strconv.ParseInt(c.Value, 10, 16)
-
+			expirationTimestamp, err := strconv.ParseInt(c.Value, 10, 64)
+			
 			if err != nil {
 				// should never reach here 
 				return fmt.Errorf("caveat value not a valid integer")
 			}
 
-			if currentTimestamp - creationTime < secondsUntilExpiration {
+			expirationTime := time.Unix(expirationTimestamp, 0)
+			currentTime := time.Unix(currentTimestamp, 0)
+			
+			if currentTime.Before(expirationTime) {
 				return nil
 			}
 			
