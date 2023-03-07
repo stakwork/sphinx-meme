@@ -22,7 +22,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec // indirect
 	go.etcd.io/etcd/server/v3 v3.5.1 // indirect
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/crypto v0.1.0
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/macaroon.v2 v2.1.0
