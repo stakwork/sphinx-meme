@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/crypto/blake2b"
-
 	jwt "github.com/dgrijalva/jwt-go"
 
 	"github.com/stakwork/sphinx-meme/auth"
@@ -22,7 +20,8 @@ var TIMEOUT = 10
 
 func ask(w http.ResponseWriter, r *http.Request) {
 	ts := strconv.Itoa(int(time.Now().Unix()))
-	h := blake2b.Sum256([]byte(ts))
+	// h := blake2b.Sum256([]byte(ts))
+	h := []byte(ts)
 	challenge := base64.URLEncoding.EncodeToString(h[:])
 
 	w.WriteHeader(http.StatusOK)
@@ -62,7 +61,8 @@ func verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := blake2b.Sum256([]byte(id))
+	// h := blake2b.Sum256([]byte(id))
+	h := []byte(id)
 	challenge := base64.URLEncoding.EncodeToString(h[:])
 
 	pubKey, valid, err := ecdsa.VerifyAndExtract(challenge, sig)
