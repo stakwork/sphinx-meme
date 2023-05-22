@@ -17,7 +17,7 @@ func TestSignAndVerify(t *testing.T) {
 	msg := "2GKsZzmRrWTCiwmS29cTfQ==" // base64 encoded string
 	sig := Sign(msg, zekePrivKey)
 
-	pubKey, valid, err := VerifyAndExtract(msg, sig)
+	pubKey, valid, err := VerifyAndExtract(msg, sig, pubKey1)
 
 	if err != nil {
 		t.Fatalf(err.Error())

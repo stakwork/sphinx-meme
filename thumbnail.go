@@ -199,7 +199,7 @@ func getAndCropImage(path string) {
 
 		buf := new(bytes.Buffer)
 		if err := png.Encode(buf, thumb); err != nil {
-			fmt.Printf("unable to encode png %s\n", err.Error)
+			fmt.Printf("unable to encode png %s\n", err.Error())
 			return
 		}
 		// err = storage.Store.PutReader(path+"_thumb", buf, int64(len(buf.Bytes())), "image/png", s3.PublicRead)

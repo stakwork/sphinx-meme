@@ -463,24 +463,13 @@ func getMedia(w http.ResponseWriter, r *http.Request) {
 		bytesToVerify := parsed.Bytes
 		bytes64 := base64.URLEncoding.EncodeToString(bytesToVerify)
 
-		pubKeyZ, valid, err := ecdsa.VerifyAndExtract(bytes64, sig)
+		_, valid, err := ecdsa.VerifyAndExtract(bytes64, sig, media.OwnerPubKey)
 		if !valid || err != nil {
 			fmt.Println("Cant Verify")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		// bytesOwner, _ := base64.URLEncoding.DecodeString(media.OwnerPubKey)
-		// hexOwner := hex.EncodeToString(bytesOwner)
-		// fmt.Println("hexowner,", hexOwner)
-		// bytesPub, _ := base64.URLEncoding.DecodeString(pubKeyZ)
-		// hexPub := hex.EncodeToString(bytesPub)
-		// fmt.Println("hexpub", hexPub)
-		if media.OwnerPubKey != pubKeyZ {
-			fmt.Println("Invalid Signature")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
 	}
 
 	fmt.Printf("GET: %s\n", muid)

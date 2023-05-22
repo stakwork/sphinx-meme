@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 )
@@ -50,7 +49,7 @@ type ParsedTerms struct {
 
 // Parse ...
 func Parse(token string) (ParsedTerms, error) {
-	fmt.Printf("token %s\n", token)
+	// fmt.Printf("token %s\n", token)
 	ta := strings.Split(token, ".")
 	if len(ta) < 5 {
 		return ParsedTerms{}, errors.New("too short")
