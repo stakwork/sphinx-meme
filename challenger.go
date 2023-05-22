@@ -65,22 +65,18 @@ func verify(w http.ResponseWriter, r *http.Request) {
 	h := []byte(id)
 	challenge := base64.URLEncoding.EncodeToString(h[:])
 
-	pubKey, valid, err := ecdsa.VerifyAndExtract(challenge, sig)
+	pkb, _ := hex.DecodeString(pubkey)
+	expectedPubky := base64.URLEncoding.EncodeToString(pkb)
+
+	pubKeyExtracted, valid, err := ecdsa.VerifyAndExtract(challenge, sig, expectedPubky)
 	if !valid || err != nil {
 		fmt.Println("not verified")
 		w.WriteHeader(http.StatusNotAcceptable)
 		return
 	}
 
-	pkb, _ := hex.DecodeString(pubkey)
-	if pubKey != base64.URLEncoding.EncodeToString(pkb) {
-		fmt.Println("wrong pub key")
-		w.WriteHeader(http.StatusNotAcceptable)
-		return
-	}
-
 	claims := jwt.MapClaims{
-		"key": pubKey,
+		"key": pubKeyExtracted,
 		"exp": auth.ExpireInHours(24 * 7),
 	}
 	if readonly != "" {

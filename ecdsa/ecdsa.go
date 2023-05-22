@@ -9,12 +9,49 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-// VerifyAndExtract ...
-func VerifyAndExtract(msg64, sig64 string) (string, bool, error) {
+func stringify(a string) ([]byte, error) {
+	return []byte(a), nil
+}
 
-	msg, err := base64.URLEncoding.DecodeString(msg64)
+// VerifyAndExtract ...
+func VerifyAndExtract(msg64, sig64, expectedPubKey string) (string, bool, error) {
+
+	if msg64 == "" || sig64 == "" || expectedPubKey == "" {
+		return "", false, errors.New("bad args to VerifyAndExtract")
+	}
+
+	err := errors.New("invalid sig")
+	for _, decoder := range []func(string) ([]byte, error){
+		base64.URLEncoding.DecodeString,
+		stringify,
+	} {
+		msg, err := decoder(msg64)
+		if err == nil {
+			pubKey64, valid, err := verifyAndExtractInner(msg, sig64)
+			if err != nil {
+				return "", false, err
+			}
+			if expectedPubKey != "" {
+				if pubKey64 != expectedPubKey {
+					err = errors.New("unexpected pubkey")
+					continue // skip to next one
+					// if both "continue" then it fails
+				}
+			}
+			return pubKey64, valid, nil
+		}
+	}
+	return "", false, err
+}
+
+// VerifyAndExtract ...
+func verifyAndExtractInner(msg []byte, sig64 string) (string, bool, error) {
+
+	if msg == nil {
+		return "", false, errors.New("no msg")
+	}
 	sig, err := base64.URLEncoding.DecodeString(sig64)
-	if err != nil || sig == nil || msg == nil {
+	if err != nil || sig == nil {
 		return "", false, errors.New("bad")
 	}
 
