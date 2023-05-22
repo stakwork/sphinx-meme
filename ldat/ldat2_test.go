@@ -20,12 +20,18 @@ func tsBytes() []byte {
 	return b
 }
 
+// func TestUtf8(t *testing.T) {
+// 	b := tsBytes()
+// 	if !utf8.Valid(b) {
+// 		t.Fatalf("not utf8")
+// 	}
+// }
+
 func TestSignAndVerifyBothy(t *testing.T) {
 
 	// setup signer
 	zekePrivKey, zekeKeyPub := btcec.PrivKeyFromBytes(btcec.S256(), zekesPrivKey)
 	pubKey1 := base64.URLEncoding.EncodeToString(zekeKeyPub.SerializeCompressed())
-	signer = newNodeSigner(zekePrivKey)
 
 	// start ldat
 	muid := "qFSOa50yWeGSG8oelsMvctLYdejPRD090dsypBSx_xg="
@@ -79,27 +85,6 @@ var zekesPrivKey = []byte{
 	0x1a, 0x1f, 0xc3, 0x32, 0x8f, 0xa7, 0x63, 0xa9,
 	0x26, 0x97, 0x23, 0xc8, 0xdb, 0x8f, 0xac, 0x4f,
 	0x93, 0xaf, 0x72, 0xdb, 0x18, 0x6d, 0x6e, 0x90,
-}
-
-var signer *nodeSigner
-
-// NodeSigner is an implementation of the MessageSigner interface backed by the
-// identity private key of running lnd node.
-type nodeSigner struct {
-	privKey *btcec.PrivateKey
-}
-
-// NewNodeSigner creates a new instance of the NodeSigner backed by the target
-// private key.
-func newNodeSigner(key *btcec.PrivateKey) *nodeSigner {
-	priv := &btcec.PrivateKey{}
-	priv.Curve = btcec.S256()
-	priv.PublicKey.X = key.X
-	priv.PublicKey.Y = key.Y
-	priv.D = key.D
-	return &nodeSigner{
-		privKey: priv,
-	}
 }
 
 func stringify(a string) ([]byte, error) {
