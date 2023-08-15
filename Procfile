@@ -1,1 +1,1 @@
-web: application
+web: bin/sphinx-meme
