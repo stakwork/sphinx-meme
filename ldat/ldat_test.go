@@ -34,15 +34,12 @@ func TestToken(t *testing.T) {
 
 	terms := base64.URLEncoding.EncodeToString(parsed.Bytes)
 
-	pubKey, valid, err := ecdsa.VerifyAndExtract(terms, sig)
+	_, valid, err := ecdsa.VerifyAndExtract(terms, sig, signingPubKey)
 	if !valid || err != nil {
 		t.Fatalf("fail")
 		return
 	}
 
-	if pubKey != signingPubKey {
-		t.Fatalf("damn")
-	}
 }
 
 func TestTokenWithMeta(t *testing.T) {
@@ -52,19 +49,16 @@ func TestTokenWithMeta(t *testing.T) {
 	tok := "bG9jYWxob3N0OjUwMDA=.qFSOa50yWeGSG8oelsMvctLYdejPRD090dsypBSx_xg=.A3PKNqMx2P2EfxkJCHFaNJl7Fdw8XVYMoDLPNBL89JTk.YCxo5w==.YW10PTEwMA==.HwPsHDtW12CQDvvP96pTFcpFORxf0IVq89r4duAcAPOlZx9ElSz8THGPaquyWFbpsR6gN-Ojy6HxXx9XCLEjK2U="
 	parsed, _ := Parse(tok)
 
-	fmt.Printf("terms: %+v\n", parsed.Terms)
+	// fmt.Printf("terms: %+v\n", parsed.Terms)
 
 	sig := parsed.Terms.Sig
 
 	terms := base64.URLEncoding.EncodeToString(parsed.Bytes)
 
-	pubKey, valid, err := ecdsa.VerifyAndExtract(terms, sig)
+	_, valid, err := ecdsa.VerifyAndExtract(terms, sig, signingPubKey)
 	if !valid || err != nil {
 		t.Fatalf("fail")
 		return
 	}
 
-	if pubKey != signingPubKey {
-		t.Fatalf("damn")
-	}
 }
