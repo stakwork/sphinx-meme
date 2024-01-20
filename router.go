@@ -445,10 +445,13 @@ func getMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if mypubkey != terms.BuyerPubKey { // pubkey must match terms pubkey
-		fmt.Println("Wrong Buyer Pub Key")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+	// BuyerPubKey is optional
+	if len(terms.BuyerPubKey) > 0 {
+		if mypubkey != terms.BuyerPubKey { // pubkey must match terms pubkey
+			fmt.Println("Wrong Buyer Pub Key")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	nonceBytes, err := hex.DecodeString(media.Nonce)

@@ -12,8 +12,8 @@ import (
 type Terms struct {
 	Host        string
 	Muid        string
-	Exp         int64 // unix timestamp of expiry
 	BuyerPubKey string
+	Exp         int64 // unix timestamp of expiry
 	Sig         string
 	Meta        Meta
 }
@@ -70,7 +70,9 @@ func Parse(token string) (ParsedTerms, error) {
 		case 1:
 			termz.Muid = base64.URLEncoding.EncodeToString(b)
 		case 2:
-			termz.BuyerPubKey = base64.URLEncoding.EncodeToString(b)
+			if len(b) > 0 {
+				termz.BuyerPubKey = base64.URLEncoding.EncodeToString(b)
+			}
 		case 3:
 			termz.Exp = int64(binary.BigEndian.Uint32(b))
 		case len(ta) - 1:
