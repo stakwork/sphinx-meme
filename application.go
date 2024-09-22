@@ -31,5 +31,8 @@ func main() {
 	}
 
 	fmt.Println("serving port " + port)
-	http.ListenAndServe(":"+port, r)
+	err = http.ListenAndServe(":"+port, r)
+	if err != nil {
+		fmt.Println(err)
+	}
 }

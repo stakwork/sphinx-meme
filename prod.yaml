@@ -1,0 +1,38 @@
+services:
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    command: caddy reverse-proxy --from https://$DOMAIN:443 --to http://bot.sphinx:5000
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - caddy:/data
+    depends_on:
+      - bot
+
+  meme:
+    image: sphinxlightning/sphinx-meme:latest
+    restart: on-failure
+    container_name: meme.sphinx
+    environment:
+      - PORT=5000
+      - STORAGE_MODE=S3
+      - JWT_KEY=$JWT_KEY
+      - S3_KEY=$S3_KEY
+      - S3_SECRET=$S3_SECRET
+      - HOST=memes.sphinx.chat
+      - DATABASE_URL=$DATABASE_URL
+      - PODCAST_INDEX_SECRET='$PODCAST_INDEX_SECRET'
+    ports:
+      - 5000:5000
+
+volumes:
+  caddy:
+
+  
+
+
+
+
