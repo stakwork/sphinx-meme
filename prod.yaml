@@ -3,14 +3,14 @@ services:
   caddy:
     image: caddy:2.8.4-alpine
     restart: unless-stopped
-    command: caddy reverse-proxy --from https://$DOMAIN:443 --to http://bot.sphinx:5000
+    command: caddy reverse-proxy --from https://$DOMAIN:443 --to http://meme.sphinx:5000
     ports:
       - 80:80
       - 443:443
     volumes:
       - caddy:/data
     depends_on:
-      - bot
+      - meme
 
   meme:
     image: sphinxlightning/sphinx-meme:latest
