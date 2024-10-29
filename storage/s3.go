@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/goamz/goamz/aws"
@@ -23,16 +22,17 @@ func (store s3store) Init() {
 	s3Key := os.Getenv("S3_KEY")
 	s3Secret := os.Getenv("S3_SECRET")
 	if s3Key == "" || s3Secret == "" {
-		log.Panic("MISSING S3 CREDS!!!!")
-		return
+		connection := s3.New(aws.Auth{}, aws.USEast)
+		space.bucket = connection.Bucket("sphinx-memes")
+	} else {
+		AWSAuth := aws.Auth{
+			AccessKey: s3Key,
+			SecretKey: s3Secret,
+		}
+		// https://github.com/goamz/goamz/blob/master/aws/regions.go
+		connection := s3.New(AWSAuth, aws.USEast)
+		space.bucket = connection.Bucket("sphinx-memes")
 	}
-	AWSAuth := aws.Auth{
-		AccessKey: s3Key,
-		SecretKey: s3Secret,
-	}
-	// https://github.com/goamz/goamz/blob/master/aws/regions.go
-	connection := s3.New(AWSAuth, aws.USEast)
-	space.bucket = connection.Bucket("sphinx-memes")
 	space.prefix = ""
 }
 
