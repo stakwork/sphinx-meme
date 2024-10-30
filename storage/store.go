@@ -14,7 +14,7 @@ func Init() {
 		mode = "local"
 	}
 	if mode == "s3" || mode == "S3" {
-		Store = &space
+		Store = &bucket
 	} else {
 		Store = &Local // pointer
 	}

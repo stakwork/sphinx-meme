@@ -9,6 +9,9 @@ import (
 
 	"github.com/goamz/goamz/aws"
 	"github.com/goamz/goamz/s3"
+	// "github.com/goamz/goamz/s3"
+	// "github.com/aws/aws-sdk-go-v2/aws"
+	// "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type s3store struct {
