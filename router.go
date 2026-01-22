@@ -68,6 +68,7 @@ func initRouter() *chi.Mux {
 		r.Get("/template/{muid}", getTemplate)
 		r.Get("/templates", getTemplates)
 		r.Get("/file/{token}", getMedia)
+		r.Get("/preferences", getPreferences)
 	})
 
 	// route for updating or adding media files
@@ -83,6 +84,7 @@ func initRouter() *chi.Mux {
 		r.Post("/file", uploadEncryptedFile)
 		r.Post("/public", uploadPublic)
 		r.Post("/template", uploadTemplate)
+		r.Post("/preferences", uploadPreferences)
 		r.Put("/purchase/{muid}", mediaPurchase) // from owners relay node to update stats (and check current price)
 	})
 
@@ -277,6 +279,144 @@ func uploadTemplate(w http.ResponseWriter, r *http.Request) {
 
 func uploadPublic(w http.ResponseWriter, r *http.Request) {
 	uploadFile(w, r, false, true, true)
+}
+
+func uploadPreferences(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	pubKeyFromToken := ctx.Value(auth.ContextKey).(string)
+
+	// Parse multipart form
+	MAX_UPLOAD_SIZE := ctx.Value(lsat.MaxUploadSizeContextKey).(int64)
+	r.Body = http.MaxBytesReader(w, r.Body, MAX_UPLOAD_SIZE)
+
+	if err := r.ParseMultipartForm(MAX_UPLOAD_SIZE); err != nil {
+		fmt.Println("err:", err)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "File too big",
+		})
+		return
+	}
+
+	// Get pubkey param from form
+	pubKeyParam := r.FormValue("pubkey")
+	if pubKeyParam == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Missing pubkey parameter",
+		})
+		return
+	}
+
+	// Validate pubkey param matches the one from JWT token
+	if pubKeyFromToken != pubKeyParam {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Pubkey does not match authentication token",
+		})
+		return
+	}
+
+	// Get the uploaded file
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		fmt.Println("Error Retrieving the File:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Error retrieving the file",
+		})
+		return
+	}
+	defer file.Close()
+
+	// Check file size
+	if handler.Size > MAX_UPLOAD_SIZE {
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "File too big",
+		})
+		return
+	}
+
+	// Read file content
+	var buf bytes.Buffer
+	length, err := io.Copy(&buf, file)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Error reading file",
+		})
+		return
+	}
+
+	// Use zero nonce (no encryption for preferences)
+	var nonce [32]byte
+
+	// Get content type
+	contentType := "application/octet-stream"
+	contentTypes := handler.Header["Content-Type"]
+	if len(contentTypes) > 0 {
+		contentType = contentTypes[0]
+	}
+
+	// Use pubkey as the file path (this will overwrite if exists)
+	path := "preferences_" + pubKeyParam
+
+	// Upload the file
+	err = storage.Store.PostReader(path, &buf, length, contentType, nonce)
+	if err != nil {
+		fmt.Println("Error uploading file:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Error uploading file",
+		})
+		return
+	}
+
+	fmt.Printf("Preferences uploaded for pubkey: %s, size: %d bytes\n", pubKeyParam, length)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"pubkey":  pubKeyParam,
+		"size":    length,
+	})
+}
+
+func getPreferences(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	pubKeyFromToken := ctx.Value(auth.ContextKey).(string)
+
+	// Use zero nonce (no encryption for preferences)
+	var nonce [32]byte
+
+	// Build the file path
+	path := "preferences_" + pubKeyFromToken
+
+	reader, err := storage.Store.GetReader(path, nonce)
+	if err != nil {
+		fmt.Printf("Preferences not found for pubkey: %s\n", pubKeyFromToken)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Preferences not found",
+		})
+		return
+	}
+	defer reader.Close()
+
+	fmt.Printf("Preferences retrieved for pubkey: %s\n", pubKeyFromToken)
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	io.Copy(w, reader)
 }
 
 // UploadFile uploads a file of any type
