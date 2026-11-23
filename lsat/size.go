@@ -23,8 +23,8 @@ func GetMaxUploadSizeContextLarge(next http.Handler) http.Handler {
 func getMaxSize(w http.ResponseWriter, r *http.Request, next http.Handler, large bool) {
 		ctx := r.Context()
 
-		// set default to 32MB in bytes
-		maxBytes := int64(32<<20+512)
+		// set default to 100MB in bytes
+		maxBytes := int64(100<<20+512)
 		
 		// Can optional turn on via environment variable the ability to
 		// enforce file size restrictions by LSAT. If Aperture is running
