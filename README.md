@@ -134,7 +134,7 @@ it's running in a way that is compatible with this setup.
 The [Sphinx Stack](https://github.com/stakwork/sphinx-stack) now has support for LSAT-enabled paywalls.
 Meme server leverages this for protected routes for uploading large files. 
 
-If you do nothing, meme server will continue to work as before with an upper size limit of 32MB. 
+If you do nothing, meme server will continue to work as before with an upper size limit of 100MB. 
 
 The easiest way to enable the paywall is using docker compose with sphinx stack. This will probably
 be simplified in the future, with better docker images, etc., but for now the setup looks like this:
@@ -147,7 +147,7 @@ There is a yaml file used for configuring Aperture. The relevant fields (that ca
 
 ```yaml
 constraints:
-      "large_upload_max_mb": "32"
+      "large_upload_max_mb": "100"
 
 authwhitelistpaths:
 	# update this to be a regex to catch all
@@ -167,7 +167,7 @@ There are two environment variables we care about, which can  be seen in the loc
 
 #### `RESTRICT_UPLOAD_SIZE`
 This is our initial "switch" to turn on the protections. If this isn't turned on 
-then the default 32MB is used for all file upload paths (except `/largefile` 
+then the default 100MB is used for all file upload paths (except `/largefile` 
 will always require an LSAT if aperture is running as a proxy). 
 Set this to `1` or `true` to turn on restrictions.
 
@@ -191,7 +191,7 @@ any requests with file attachments larger than 2MB.
 
 Because aperture is running, all requests to `/largefile` will require
 an LSAT.  `POST /largefile` with an LSAT and you will be able to upload
-anything up to 32MB (which is what aperture sets in the LSAT caveats).
+anything up to 100MB (which is what aperture sets in the LSAT caveats).
 
 ### LSAT Troubleshooting
 A couple useful tools for troubleshooting are [Postman](https://postman.com) for
@@ -201,10 +201,10 @@ where you can inspect and manipulate LSATs.
 One interesting thing to try is experimenting with LSAT delegation. 
 
 Take an LSAT that's returned from aperture and paste it into the caveats
-section in the playground. You'll see a constraint `large_upload_max_mb=32`.
+section in the playground. You'll see a constraint `large_upload_max_mb=100`.
 Now we can add a new constraint to that LSAT: `large_upload_max_mb=3`. Meme
 will enforce a restriction that any newer caveats must be increasingly restrictive
-such that you couldn't add a caveat where the max is larger than the 32
+such that you couldn't add a caveat where the max is larger than the 100
 of the original LSAT.  
 The new LSAT macaroon can then be shared with someone else (and is impossible
 to revert) and anyone with this LSAT will be restricted to uploads of no
